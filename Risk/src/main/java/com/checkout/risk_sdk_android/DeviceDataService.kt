@@ -1,4 +1,4 @@
-package com.checkout.risk
+package com.checkout.risk_sdk_android
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay

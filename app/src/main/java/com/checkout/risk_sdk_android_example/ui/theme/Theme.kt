@@ -1,4 +1,4 @@
-package com.checkout.risk_sdk_android.ui.theme
+package com.checkout.risk_sdk_android_example.ui.theme
 
 import android.app.Activity
 import android.os.Build

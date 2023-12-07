@@ -16,6 +16,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "risk-sdk-android"
+rootProject.name = "risk-sdk-android-example"
 include(":app")
 include(":Risk")

@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.checkout.risk"
+    namespace = "com.checkout.risk_sdk_android"
     compileSdk = 34
 
     defaultConfig {
@@ -36,7 +36,7 @@ dependencies {
     implementation(platform("com.squareup.okhttp3:okhttp-bom:4.11.0"))
     implementation("com.squareup.okhttp3:okhttp")
 
-    implementation("androidx.core:core-ktx:1.9.0")
+    implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.fingerprint.android:pro:2.3.4")
     implementation("com.google.android.material:material:1.10.0")

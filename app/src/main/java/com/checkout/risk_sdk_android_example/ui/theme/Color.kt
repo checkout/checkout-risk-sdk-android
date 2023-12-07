@@ -1,4 +1,4 @@
-package com.checkout.risk_sdk_android.ui.theme
+package com.checkout.risk_sdk_android_example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

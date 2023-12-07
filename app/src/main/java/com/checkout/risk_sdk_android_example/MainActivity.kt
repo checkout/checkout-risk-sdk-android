@@ -1,4 +1,4 @@
-package com.checkout.risk_sdk_android
+package com.checkout.risk_sdk_android_example
 
 import android.content.Context
 import android.os.Bundle
@@ -22,13 +22,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.checkout.risk.Risk
-import com.checkout.risk.RiskConfig
-import com.checkout.risk.RiskEnvironment
-import com.checkout.risk_sdk_android.ui.theme.RisksdkandroidTheme
+import com.checkout.risk_sdk_android.Risk
+import com.checkout.risk_sdk_android.RiskConfig
+import com.checkout.risk_sdk_android.RiskEnvironment
+import com.checkout.risk_sdk_android_example.ui.theme.RisksdkandroidTheme
 import kotlinx.coroutines.launch
 
-class MainActivity2 : ComponentActivity() {
+class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 

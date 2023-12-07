@@ -1,4 +1,4 @@
-package com.checkout.risk
+package com.checkout.risk_sdk_android
 
 import android.content.Context
 
@@ -8,7 +8,7 @@ class Risk private constructor(
     companion object {
         private lateinit var riskInstance: Risk
 
-        suspend fun getInstance(applicationContext: Context, config: RiskConfig): Risk {
+        suspend fun getInstance(applicationContext: Context, config: RiskConfig): Risk? {
             return if (::riskInstance.isInitialized) {
                 riskInstance
             } else {
@@ -33,9 +33,10 @@ class Risk private constructor(
     }
 
     suspend fun publishData() {
-        fingerprintService.publishData().onSuccess {
-            persistFpData(it)
-        }
+        fingerprintService.publishData()
+            .onSuccess {
+                persistFpData(it)
+            }
             .onFailure {
                 // handle failure, log
                 println(it.message)
