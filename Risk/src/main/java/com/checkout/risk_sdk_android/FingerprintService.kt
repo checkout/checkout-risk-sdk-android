@@ -4,6 +4,8 @@ import android.content.Context
 import com.fingerprintjs.android.fpjs_pro.Configuration
 import com.fingerprintjs.android.fpjs_pro.FingerprintJS
 import com.fingerprintjs.android.fpjs_pro.FingerprintJSFactory
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
 /**
@@ -11,13 +13,18 @@ import kotlin.coroutines.suspendCoroutine
  *
  * @param context The Android context.
  * @param fingerprintPublicKey The API key for FingerprintJS.
+ * @param fingerprintEndpoint The endpoint for FingerprintJS.
  */
 class FingerprintService(
     context: Context,
     fingerprintPublicKey: String,
+    fingerprintEndpoint: String
 ) {
     private val client: FingerprintJS = FingerprintJSFactory(context).createInstance(
-        Configuration(apiKey = fingerprintPublicKey)
+        Configuration(
+            apiKey = fingerprintPublicKey,
+            endpointUrl = fingerprintEndpoint
+        )
     )
 
     /**
@@ -27,14 +34,14 @@ class FingerprintService(
      */
     suspend fun publishData(): Result<String> = runCatching {
         suspendCoroutine { continuation ->
-//            client.getVisitorId(
-//                listener = {
-//                    continuation.resume(it.requestId)
-//                },
-//                errorListener = {
-//                    continuation.resumeWithException(FingerprintServiceException(it.description))
-//                }
-//            )
+            client.getVisitorId(
+                listener = {
+                    continuation.resume(it.requestId)
+                },
+                errorListener = {
+                    continuation.resumeWithException(FingerprintServiceException(it.description))
+                }
+            )
         }
     }
 }

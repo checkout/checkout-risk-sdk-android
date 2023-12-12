@@ -24,7 +24,8 @@ class Risk private constructor(
                 if (fingerprintIntegration !== null && fingerprintIntegration.enabled) {
                     val fingerprintService = FingerprintService(
                         applicationContext,
-                        fingerprintIntegration.publicKey!!
+                        fingerprintIntegration.publicKey!!,
+                        getFingerprintEndpoint(config.environment)
                     )
                     riskInstance = Risk(fingerprintService)
                 }
@@ -49,6 +50,7 @@ class Risk private constructor(
     private suspend fun persistFpData(
         fingerprintRequestID: String
     ) {
-        println("data persisted")
+        // TODO: add once device data persistence is implemented
+        println("data persisted $fingerprintRequestID")
     }
 }
