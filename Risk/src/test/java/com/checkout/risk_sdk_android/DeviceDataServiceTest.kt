@@ -38,8 +38,8 @@ class DeviceDataServiceTest {
 
         runTest {
             deviceDataService.getConfiguration().getOrNull()?.let {
-                Assert.assertEquals(true, it.enabled)
-                Assert.assertEquals("pk_test_key", it.publicKey)
+                Assert.assertEquals(true, it.fingerprintIntegration.enabled)
+                Assert.assertEquals("pk_test_key", it.fingerprintIntegration.publicKey)
             }
         }
 
