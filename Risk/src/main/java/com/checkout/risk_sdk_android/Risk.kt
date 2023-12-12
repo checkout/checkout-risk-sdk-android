@@ -7,27 +7,38 @@ class Risk private constructor(
 ) {
     companion object {
         private var riskInstance: Risk? = null
+        private lateinit var deviceDataService: DeviceDataService
 
         suspend fun getInstance(applicationContext: Context, config: RiskConfig): Risk? {
             return if (riskInstance !== null) {
                 riskInstance
             } else {
-                val deviceDataService = DeviceDataService(
+                deviceDataService = DeviceDataService(
                     getDeviceDataEndpoint(config.environment),
                     config.publicKey,
                     if (config.framesMode) RiskIntegrationType.FRAMES else RiskIntegrationType.STANDALONE
                 )
 
-                val fingerprintIntegration =
+                val deviceDataConfig =
                     deviceDataService.getConfiguration().getOrNull()
 
-                if (fingerprintIntegration !== null && fingerprintIntegration.enabled) {
+                deviceDataConfig?.let {
                     val fingerprintService = FingerprintService(
                         applicationContext,
-                        fingerprintIntegration.publicKey!!,
+                        deviceDataConfig.fingerprintIntegration.publicKey!!,
                         getFingerprintEndpoint(config.environment)
                     )
                     riskInstance = Risk(fingerprintService)
+
+
+                    if (it.fingerprintIntegration.enabled) {
+                        val fingerprintService = FingerprintService(
+                            applicationContext,
+                            it.fingerprintIntegration.publicKey!!,
+                            getFingerprintEndpoint(config.environment)
+                        )
+                        riskInstance = Risk(fingerprintService)
+                    }
                 }
 
                 return riskInstance
@@ -49,8 +60,10 @@ class Risk private constructor(
 
     private suspend fun persistFpData(
         fingerprintRequestID: String
-    ) {
+    ): Result<PersistFingerprintDataResponse> {
         // TODO: add once device data persistence is implemented
         println("data persisted $fingerprintRequestID")
+
+        return deviceDataService.persistFingerprintData(fingerprintRequestID)
     }
 }
