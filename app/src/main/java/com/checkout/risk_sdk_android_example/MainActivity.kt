@@ -46,7 +46,14 @@ fun MyScreen(context: Context) {
 
     LaunchedEffect("risk") {
         riskInstance =
-            Risk.getInstance(context, RiskConfig("pk_public_key", RiskEnvironment.QA, false))
+            Risk.getInstance(
+                context,
+                RiskConfig(
+                    BuildConfig.SAMPLE_MERCHANT_PUBLIC_KEY,
+                    RiskEnvironment.QA,
+                    false
+                )
+            )
     }
 
     val coroutineScope = rememberCoroutineScope()

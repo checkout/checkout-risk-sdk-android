@@ -18,6 +18,11 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+        buildConfigField(
+            "String",
+            "SAMPLE_MERCHANT_PUBLIC_KEY",
+            "\"${System.getenv()["SAMPLE_MERCHANT_PUBLIC_KEY"]}\""
+        )
     }
 
     buildTypes {
@@ -38,6 +43,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.2"
