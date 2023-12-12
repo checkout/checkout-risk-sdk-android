@@ -6,26 +6,26 @@ class Risk private constructor(
     private val fingerprintService: FingerprintService,
 ) {
     companion object {
-        private lateinit var riskInstance: Risk
+        private var riskInstance: Risk? = null
 
         suspend fun getInstance(applicationContext: Context, config: RiskConfig): Risk? {
-            return if (::riskInstance.isInitialized) {
+            return if (riskInstance !== null) {
                 riskInstance
             } else {
-                val config = RiskSDKInternalConfig(config)
-                val deviceDataService = DeviceDataService(config)
+                val internalConfig = RiskSDKInternalConfig(config)
+
+                val deviceDataService = DeviceDataService(internalConfig)
 
                 val fingerprintIntegration =
-                    deviceDataService.getConfiguration().getOrThrow().fingerprintIntegration
+                    deviceDataService.getConfiguration().getOrNull()
 
-                if (fingerprintIntegration.enabled) {
+                if (fingerprintIntegration !== null && fingerprintIntegration.enabled) {
                     val fingerprintService = FingerprintService(
                         applicationContext,
-                        fingerprintIntegration.publicKey
+                        fingerprintIntegration.publicKey!!
                     )
                     riskInstance = Risk(fingerprintService)
                 }
-
 
                 return riskInstance
             }
@@ -33,6 +33,7 @@ class Risk private constructor(
     }
 
     suspend fun publishData() {
+        println("publishing data")
         fingerprintService.publishData()
             .onSuccess {
                 persistFpData(it)

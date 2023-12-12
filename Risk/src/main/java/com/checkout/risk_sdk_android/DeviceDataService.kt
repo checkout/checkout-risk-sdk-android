@@ -1,29 +1,60 @@
 package com.checkout.risk_sdk_android
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
+import com.google.gson.annotations.SerializedName
+import retrofit2.Response
+import retrofit2.http.GET
+import retrofit2.http.Header
+import retrofit2.http.Query
 
-data class FingerprintIntegration(val enabled: Boolean, val publicKey: String)
+data class DeviceDataConfiguration(
+    @SerializedName("fingerprint_integration")
+    val fingerprintIntegration: FingerprintIntegration
+)
 
-data class DeviceDataConfiguration(val fingerprintIntegration: FingerprintIntegration)
+data class FingerprintIntegration(
+    @SerializedName("enabled")
+    val enabled: Boolean,
+    @SerializedName("public_key")
+    val publicKey: String?
+)
 
-class DeviceDataService(
-    private val config: RiskSDKInternalConfig
-) {
-    suspend fun getConfiguration(): Result<DeviceDataConfiguration> {
-        val endpoint =
-            "${config.deviceDataEndpoint}/configuration?integrationType=${config.integrationType.type}"
-        val authToken = config.merchantPublicKey
+/**
+ * Service for retrieving device data configuration.
+ *
+ * @param config The internal configuration for the Risk SDK.
+ */
+class DeviceDataService(private val config: RiskSDKInternalConfig) {
+    private val deviceDataApi = DeviceDataApi(config)
 
-        return withContext(Dispatchers.IO) {
-            delay(2000)
+    /**
+     * Retrieves the device data configuration.
+     *
+     * @return Result containing the FingerprintIntegration on success, or an exception on failure.
+     */
+    suspend fun getConfiguration(): Result<FingerprintIntegration> = runCatching {
+        val response =
+            deviceDataApi.getConfiguration(config.integrationType.type, config.merchantPublicKey)
 
-            Result.success(
-                DeviceDataConfiguration(FingerprintIntegration(true, "fp_public_key"))
-            )
+        if (response.isSuccessful) {
+            response.body()?.fingerprintIntegration!!
+        } else {
+            throw ApiException(response.code(), response.message())
         }
     }
 
-    fun persistFpData(cardToken: String, fingerprintRequestId: String) {}
+}
+
+private sealed interface DeviceDataApi {
+    companion object {
+        operator fun invoke(config: RiskSDKInternalConfig): DeviceDataApi {
+            return getRetrofitClient(config.deviceDataEndpoint)
+                .create(DeviceDataApi::class.java)
+        }
+    }
+
+    @GET("configuration")
+    suspend fun getConfiguration(
+        @Query("integrationType") integrationType: String,
+        @Header("Authorization") authHeader: String
+    ): Response<DeviceDataConfiguration>
 }
