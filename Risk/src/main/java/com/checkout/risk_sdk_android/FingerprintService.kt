@@ -32,10 +32,11 @@ class FingerprintService(
 //                    continuation.resume(it.requestId)
 //                },
 //                errorListener = {
-//                    continuation.resumeWithException(Exception(it.description))
+//                    continuation.resumeWithException(FingerprintServiceException(it.description))
 //                }
 //            )
         }
     }
 }
 
+class FingerprintServiceException(message: String?) : Exception(message)

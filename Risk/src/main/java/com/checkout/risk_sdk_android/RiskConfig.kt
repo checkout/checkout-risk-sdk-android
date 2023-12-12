@@ -1,27 +1,15 @@
 package com.checkout.risk_sdk_android
 
-data class RiskSDKInternalConfig(
-    private val config: RiskConfig
-) {
-    val merchantPublicKey = config.publicKey
-    val environment = config.environment
-    val integrationType =
-        if (config.framesMode) RiskIntegrationType.FRAMES else RiskIntegrationType.STANDALONE
-    val sourceType: SourceType =
-        if (config.framesMode) SourceType.CARD_TOKEN else SourceType.RISK_SDK
+fun getDeviceDataEndpoint(environment: RiskEnvironment) = when (environment) {
+    RiskEnvironment.QA -> "https://prism-qa.ckotech.co"
+    RiskEnvironment.SANDBOX -> "https://risk.sandbox.checkout.com"
+    RiskEnvironment.PRODUCTION -> "https://risk.checkout.com"
+}
 
-    val deviceDataEndpoint = when (config.environment) {
-        RiskEnvironment.QA -> "https://prism-qa.ckotech.co/collect"
-        RiskEnvironment.SANDBOX -> "https://risk.sandbox.checkout.com/collect"
-        RiskEnvironment.PRODUCTION -> "https://prism-qa.ckotech.co/collect"
-    }
-
-    val fingerprintEndpoint = when (config.environment) {
-        RiskEnvironment.QA -> "https://fpjs.cko-qa.ckotech.co"
-        RiskEnvironment.SANDBOX -> "https://fpjs.sandbox.checkout.com"
-        RiskEnvironment.PRODUCTION -> "https://fpjs.checkout.com"
-    }
-
+fun getFingerprintEndpoint(environment: RiskEnvironment) = when (environment) {
+    RiskEnvironment.QA -> "https://fpjs.cko-qa.ckotech.co"
+    RiskEnvironment.SANDBOX -> "https://fpjs.sandbox.checkout.com"
+    RiskEnvironment.PRODUCTION -> "https://fpjs.checkout.com"
 }
 
 data class RiskConfig(

@@ -21,10 +21,16 @@ data class FingerprintIntegration(
 /**
  * Service for retrieving device data configuration.
  *
- * @param config The internal configuration for the Risk SDK.
- */
-class DeviceDataService(private val config: RiskSDKInternalConfig) {
-    private val deviceDataApi = DeviceDataApi(config)
+ * @param deviceDataEndpoint The endpoint for retrieving device data configuration.
+ * @param merchantPublicKey The merchant public key.
+ * @param integrationType The integration type.
+ * */
+class DeviceDataService(
+    deviceDataEndpoint: String,
+    private val merchantPublicKey: String,
+    private val integrationType: RiskIntegrationType
+) {
+    private val deviceDataApi = DeviceDataApi(deviceDataEndpoint)
 
     /**
      * Retrieves the device data configuration.
@@ -32,8 +38,9 @@ class DeviceDataService(private val config: RiskSDKInternalConfig) {
      * @return Result containing the FingerprintIntegration on success, or an exception on failure.
      */
     suspend fun getConfiguration(): Result<FingerprintIntegration> = runCatching {
+        println("merchantPublicKey: $merchantPublicKey")
         val response =
-            deviceDataApi.getConfiguration(config.integrationType.type, config.merchantPublicKey)
+            deviceDataApi.getConfiguration(integrationType.type, merchantPublicKey)
 
         if (response.isSuccessful) {
             response.body()?.fingerprintIntegration!!
@@ -46,13 +53,13 @@ class DeviceDataService(private val config: RiskSDKInternalConfig) {
 
 private sealed interface DeviceDataApi {
     companion object {
-        operator fun invoke(config: RiskSDKInternalConfig): DeviceDataApi {
-            return getRetrofitClient(config.deviceDataEndpoint)
+        operator fun invoke(baseUrl: String): DeviceDataApi {
+            return getRetrofitClient(baseUrl)
                 .create(DeviceDataApi::class.java)
         }
     }
 
-    @GET("configuration")
+    @GET("/collect/configuration")
     suspend fun getConfiguration(
         @Query("integrationType") integrationType: String,
         @Header("Authorization") authHeader: String

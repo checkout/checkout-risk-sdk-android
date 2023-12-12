@@ -12,9 +12,11 @@ class Risk private constructor(
             return if (riskInstance !== null) {
                 riskInstance
             } else {
-                val internalConfig = RiskSDKInternalConfig(config)
-
-                val deviceDataService = DeviceDataService(internalConfig)
+                val deviceDataService = DeviceDataService(
+                    getDeviceDataEndpoint(config.environment),
+                    config.publicKey,
+                    if (config.framesMode) RiskIntegrationType.FRAMES else RiskIntegrationType.STANDALONE
+                )
 
                 val fingerprintIntegration =
                     deviceDataService.getConfiguration().getOrNull()

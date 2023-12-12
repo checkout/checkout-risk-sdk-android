@@ -1,0 +1,6 @@
+{
+  "fingerprint_integration": {
+    "enabled": true,
+    "public_key": "pk_test_key"
+  }
+}
