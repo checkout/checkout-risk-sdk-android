@@ -5,7 +5,6 @@ import com.fingerprintjs.android.fpjs_pro.Configuration
 import com.fingerprintjs.android.fpjs_pro.FingerprintJS
 import com.fingerprintjs.android.fpjs_pro.FingerprintJSFactory
 import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
 /**
@@ -15,7 +14,7 @@ import kotlin.coroutines.suspendCoroutine
  * @param fingerprintPublicKey The API key for FingerprintJS.
  * @param fingerprintEndpoint The endpoint for FingerprintJS.
  */
-class FingerprintService(
+internal class FingerprintService(
     context: Context,
     fingerprintPublicKey: String,
     fingerprintEndpoint: String
@@ -30,20 +29,27 @@ class FingerprintService(
     /**
      * Publishes fingerprint data asynchronously.
      *
-     * @return Result containing the requestId on success, or an exception on failure.
+     * @return FingerprintResult containing the requestId on success, or a message on failure.
      */
-    suspend fun publishData(): Result<String> = runCatching {
+    suspend fun publishData(): FingerprintResult =
         suspendCoroutine { continuation ->
             client.getVisitorId(
                 listener = {
-                    continuation.resume(it.requestId)
+                    continuation.resume(FingerprintResult.Success(it.requestId))
                 },
                 errorListener = {
-                    continuation.resumeWithException(FingerprintServiceException(it.description))
+                    continuation.resume(
+                        FingerprintResult.Failure(
+                            it.description ?: "Unknown error"
+                        )
+                    )
                 }
             )
         }
-    }
 }
 
-class FingerprintServiceException(message: String?) : Exception(message)
+
+internal sealed class FingerprintResult {
+    data class Success(val requestId: String) : FingerprintResult()
+    data class Failure(val message: String) : FingerprintResult()
+}

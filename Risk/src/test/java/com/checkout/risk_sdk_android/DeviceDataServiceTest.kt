@@ -38,9 +38,11 @@ class DeviceDataServiceTest {
         )
 
         runTest {
-            deviceDataService.getConfiguration().getOrNull()?.let {
-                Assert.assertEquals(true, it.fingerprintIntegration.enabled)
-                Assert.assertEquals("pk_test_key", it.fingerprintIntegration.publicKey)
+            deviceDataService.getConfiguration().let {
+                if (it is NetworkResult.Success) {
+                    Assert.assertEquals(true, it.data.fingerprintIntegration.enabled)
+                    Assert.assertEquals("pk_test_key", it.data.fingerprintIntegration.publicKey)
+                }
             }
         }
 
@@ -54,7 +56,7 @@ class DeviceDataServiceTest {
     }
 
     @Test
-    fun `getConfiguration() should throw exception when unsuccessful`() {
+    fun `getConfiguration() should return a network error when unsuccessful`() {
         val response = MockResponse()
             .setResponseCode(500)
 
@@ -67,8 +69,9 @@ class DeviceDataServiceTest {
         )
 
         runTest {
-            deviceDataService.getConfiguration().exceptionOrNull()?.let {
-                Assert.assertEquals("Server Error", it.message)
+            deviceDataService.getConfiguration().let {
+                if (it is NetworkResult.Error)
+                    Assert.assertEquals("Server Error", it.message)
             }
         }
     }
@@ -88,8 +91,12 @@ class DeviceDataServiceTest {
         )
 
         runTest {
-            deviceDataService.persistFingerprintData("fp_data").getOrNull()?.let {
-                Assert.assertEquals(PersistFingerprintDataResponse("1234567890"), it)
+            deviceDataService.persistFingerprintData("fp_data").let {
+                if (it is NetworkResult.Success)
+                    Assert.assertEquals(
+                        PersistFingerprintDataResponse("1234567890"),
+                        it.data
+                    )
             }
         }
 
@@ -126,8 +133,9 @@ class DeviceDataServiceTest {
         )
 
         runTest {
-            deviceDataService.persistFingerprintData("fp_data").exceptionOrNull()?.let {
-                Assert.assertEquals("Server Error", it.message)
+            deviceDataService.persistFingerprintData("fp_data").let {
+                if (it is NetworkResult.Error)
+                    Assert.assertEquals("Server Error", it.message)
             }
         }
     }
@@ -135,7 +143,6 @@ class DeviceDataServiceTest {
 
 
 class MockResponseFileReader(path: String) {
-
     val content: String
 
     init {

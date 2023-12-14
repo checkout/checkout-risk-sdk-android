@@ -1,24 +1,13 @@
 package com.checkout.risk_sdk_android
 
 import com.google.gson.annotations.SerializedName
+import retrofit2.HttpException
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.PUT
 import retrofit2.http.Query
-
-data class DeviceDataConfiguration(
-    @SerializedName("fingerprint_integration")
-    val fingerprintIntegration: FingerprintIntegration
-)
-
-data class FingerprintIntegration(
-    @SerializedName("enabled")
-    val enabled: Boolean,
-    @SerializedName("public_key")
-    val publicKey: String?
-)
 
 /**
  * Service for retrieving device data configuration.
@@ -27,7 +16,7 @@ data class FingerprintIntegration(
  * @param merchantPublicKey The merchant public key.
  * @param integrationType The integration type.
  * */
-class DeviceDataService(
+internal class DeviceDataService(
     deviceDataEndpoint: String,
     private val merchantPublicKey: String,
     private val integrationType: RiskIntegrationType
@@ -39,7 +28,7 @@ class DeviceDataService(
      *
      * @return Result containing the FingerprintIntegration on success, or an exception on failure.
      */
-    suspend fun getConfiguration(): Result<DeviceDataConfiguration> = executeApiCall {
+    suspend fun getConfiguration(): NetworkResult<DeviceDataConfiguration> = executeApiCall {
         deviceDataApi.getConfiguration(merchantPublicKey, integrationType.type)
     }
 
@@ -50,7 +39,7 @@ class DeviceDataService(
      *
      * @return Result containing PersistFingerprintDataResponse on success, or an exception on failure.
      */
-    suspend fun persistFingerprintData(requestId: String): Result<PersistFingerprintDataResponse> =
+    suspend fun persistFingerprintData(requestId: String): NetworkResult<PersistFingerprintDataResponse> =
         executeApiCall {
             deviceDataApi.persistFingerprintData(
                 merchantPublicKey,
@@ -58,17 +47,23 @@ class DeviceDataService(
             )
         }
 
-    private suspend fun <T> executeApiCall(apiCall: suspend () -> Response<T>): Result<T> =
-        runCatching {
-            val response = apiCall()
-
-            if (response.isSuccessful) {
-                response.body()!!
+    private suspend fun <T : Any> executeApiCall(
+        execute: suspend () -> Response<T>
+    ): NetworkResult<T> {
+        return try {
+            val response = execute()
+            val body = response.body()
+            if (response.isSuccessful && body != null) {
+                NetworkResult.Success(body)
             } else {
-                throw ApiException(response.code(), response.message())
+                NetworkResult.Error(code = response.code(), message = response.message())
             }
+        } catch (e: HttpException) {
+            NetworkResult.Error(code = e.code(), message = e.message())
+        } catch (e: Throwable) {
+            NetworkResult.Exception(e)
         }
-
+    }
 }
 
 private sealed interface DeviceDataApi {
@@ -92,13 +87,25 @@ private sealed interface DeviceDataApi {
     ): Response<PersistFingerprintDataResponse>
 }
 
-data class PersistFingerprintDataResponse(
+internal data class DeviceDataConfiguration(
+    @SerializedName("fingerprint_integration")
+    val fingerprintIntegration: FingerprintIntegration
+)
+
+internal data class FingerprintIntegration(
+    @SerializedName("enabled")
+    val enabled: Boolean,
+    @SerializedName("public_key")
+    val publicKey: String?
+)
+
+
+internal data class PersistFingerprintDataResponse(
     @SerializedName("device_session_id")
     val deviceSessionId: String,
+)
 
-    )
-
-data class PersistFingerprintDataRequest(
+internal data class PersistFingerprintDataRequest(
     @SerializedName("fp_request_id")
     val fpRequestId: String,
     @SerializedName("integration_type")
@@ -106,3 +113,14 @@ data class PersistFingerprintDataRequest(
     @SerializedName("card_token")
     val cardToken: String?,
 )
+
+internal sealed class NetworkResult<T : Any> {
+    class Success<T : Any>(val data: T) : NetworkResult<T>() {
+        override fun toString(): String {
+            return "Success(data=$data)"
+        }
+    }
+
+    class Error<T : Any>(val code: Int, val message: String) : NetworkResult<T>()
+    class Exception<T : Any>(val e: Throwable) : NetworkResult<T>()
+}

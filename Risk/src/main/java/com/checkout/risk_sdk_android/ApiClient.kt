@@ -5,7 +5,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-fun getRetrofitClient(baseUrl: String): Retrofit {
+internal fun getRetrofitClient(baseUrl: String): Retrofit {
     val httpInterceptor = HttpLoggingInterceptor()
         .setLevel(HttpLoggingInterceptor.Level.BODY)
 
@@ -19,6 +19,3 @@ fun getRetrofitClient(baseUrl: String): Retrofit {
         .client(client)
         .build()
 }
-
-
-class ApiException(val errorCode: Int, message: String) : RuntimeException(message)
