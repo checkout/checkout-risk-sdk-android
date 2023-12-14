@@ -2,9 +2,7 @@ package com.checkout.risk_sdk_android
 
 import android.content.Context
 
-class Risk private constructor(
-    private val fingerprintService: FingerprintService,
-) {
+class Risk private constructor(private val riskInternal: RiskInternal) {
     companion object {
         private var riskInstance: Risk? = null
         private lateinit var deviceDataService: DeviceDataService
@@ -31,7 +29,7 @@ class Risk private constructor(
                         getFingerprintEndpoint(config.environment)
                     )
 
-                    riskInstance = Risk(fingerprintService)
+                    riskInstance = Risk(RiskInternal(fingerprintService, deviceDataService))
 
                     if (!deviceDataConfig.data.fingerprintIntegration.enabled)
                         return RiskInitialisationResult.IntegrationDisabled
@@ -47,7 +45,15 @@ class Risk private constructor(
         }
     }
 
+    suspend fun publishData(): PublishDataResult {
+        return riskInternal.publishData()
+    }
+}
 
+internal class RiskInternal(
+    private val fingerprintService: FingerprintService,
+    private val deviceDataService: DeviceDataService
+) {
     suspend fun publishData(): PublishDataResult {
         return when (val fingerprintResult = fingerprintService.publishData()) {
             is FingerprintResult.Success -> {
