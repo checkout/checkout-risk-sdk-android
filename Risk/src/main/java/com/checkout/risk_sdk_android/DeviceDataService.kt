@@ -43,7 +43,11 @@ internal class DeviceDataService(
         executeApiCall {
             deviceDataApi.persistFingerprintData(
                 merchantPublicKey,
-                PersistFingerprintDataRequest(requestId, integrationType.type, null)
+                PersistFingerprintDataRequest(
+                    fpRequestId = requestId,
+                    integrationType = integrationType.type,
+                    cardToken = null
+                )
             )
         }
 
