@@ -2,12 +2,12 @@ package com.checkout.risk_sdk_android
 
 import android.content.Context
 
-class Risk private constructor(private val riskInternal: RiskInternal) {
-    companion object {
+public class Risk private constructor(private val riskInternal: RiskInternal) {
+    public companion object {
         private var riskInstance: Risk? = null
         private lateinit var deviceDataService: DeviceDataService
 
-        suspend fun getInstance(
+        public suspend fun getInstance(
             applicationContext: Context,
             config: RiskConfig,
         ): RiskInitialisationResult {
@@ -48,7 +48,7 @@ class Risk private constructor(private val riskInternal: RiskInternal) {
         }
     }
 
-    suspend fun publishData(): PublishDataResult {
+    public suspend fun publishData(): PublishDataResult {
         return riskInternal.publishData()
     }
 }
@@ -81,18 +81,18 @@ internal class RiskInternal(
         }
 }
 
-sealed class RiskInitialisationResult {
-    data class Success(val risk: Risk) : RiskInitialisationResult()
+public sealed class RiskInitialisationResult {
+    public data class Success(val risk: Risk) : RiskInitialisationResult()
 
-    data object IntegrationDisabled : RiskInitialisationResult()
+    public data object IntegrationDisabled : RiskInitialisationResult()
 
-    data class Failure(val message: String) : RiskInitialisationResult()
+    public data class Failure(val message: String) : RiskInitialisationResult()
 }
 
-sealed class PublishDataResult {
-    data class Success(val deviceSessionId: String) : PublishDataResult()
+public sealed class PublishDataResult {
+    public data class Success(val deviceSessionId: String) : PublishDataResult()
 
-    data class Failure(val message: String) : PublishDataResult()
+    public data class Failure(val message: String) : PublishDataResult()
 
-    data class Exception(val e: Throwable) : PublishDataResult()
+    public data class Exception(val e: Throwable) : PublishDataResult()
 }
