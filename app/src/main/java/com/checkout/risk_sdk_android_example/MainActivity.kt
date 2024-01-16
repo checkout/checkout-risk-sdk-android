@@ -33,7 +33,7 @@ import com.checkout.risk_sdk_android.RiskInitialisationResult
 import com.checkout.risk_sdk_android_example.ui.theme.RisksdkandroidTheme
 import kotlinx.coroutines.launch
 
-//import com.google.android.material.progressindicator.CircularProgressIndicator
+// import com.google.android.material.progressindicator.CircularProgressIndicator
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,7 +50,8 @@ class MainActivity : ComponentActivity() {
 enum class DataFetchStatus {
     LOADING,
     IDLE,
-    ERROR;
+    ERROR,
+    ;
 
     var errorMessage: String? = null
 
@@ -59,14 +60,13 @@ enum class DataFetchStatus {
     }
 }
 
-
 @Composable
 fun MyScreen(context: Context) {
     var riskInstance by remember { mutableStateOf<Risk?>(null) }
     var deviceSessionId by remember { mutableStateOf<String?>(null) }
     var openAlertDialog by remember {
         mutableStateOf(
-            false
+            false,
         )
     }
 
@@ -82,8 +82,8 @@ fun MyScreen(context: Context) {
                 RiskConfig(
                     BuildConfig.SAMPLE_MERCHANT_PUBLIC_KEY,
                     RiskEnvironment.QA,
-                    false
-                )
+                    false,
+                ),
             ).let {
                 when (it) {
                     is RiskInitialisationResult.Success -> {
@@ -111,12 +111,12 @@ fun MyScreen(context: Context) {
     // A surface container using the 'background' color from the theme
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+        color = MaterialTheme.colorScheme.background,
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             when (status) {
                 DataFetchStatus.LOADING -> {
@@ -134,7 +134,7 @@ fun MyScreen(context: Context) {
                             status = DataFetchStatus.IDLE
                         },
                         dialogTitle = "Something went wrong!",
-                        dialogText = status.errorMessage ?: "Unknown"
+                        dialogText = status.errorMessage ?: "Unknown",
                     )
                 }
 
@@ -160,7 +160,7 @@ fun MyScreen(context: Context) {
                                 openAlertDialog = false
                             },
                             dialogTitle = "Device Session ID",
-                            dialogText = deviceSessionId ?: "Unknown"
+                            dialogText = deviceSessionId ?: "Unknown",
                         )
                     }
                 }
@@ -191,7 +191,7 @@ fun AlertDialogExample(
             TextButton(
                 onClick = {
                     onConfirmation()
-                }
+                },
             ) {
                 Text("Confirm")
             }
@@ -200,11 +200,11 @@ fun AlertDialogExample(
             TextButton(
                 onClick = {
                     onDismissRequest()
-                }
+                },
             ) {
                 Text("Dismiss")
             }
-        }
+        },
     )
 }
 
@@ -219,7 +219,7 @@ fun PayButton(onClick: () -> Unit) {
 fun Greeting(modifier: Modifier = Modifier) {
     Text(
         text = "Welcome!",
-        modifier = modifier
+        modifier = modifier,
     )
 }
 

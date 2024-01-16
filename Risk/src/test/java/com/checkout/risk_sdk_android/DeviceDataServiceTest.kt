@@ -25,17 +25,19 @@ class DeviceDataServiceTest {
 
     @Test
     fun `getConfiguration() should return configuration when successful`() {
-        val response = MockResponse()
-            .setResponseCode(200)
-            .setBody(MockResponseFileReader("getConfiguration_response_200.json").content)
+        val response =
+            MockResponse()
+                .setResponseCode(200)
+                .setBody(MockResponseFileReader("getConfiguration_response_200.json").content)
 
         mockWebServer.enqueue(response)
 
-        val deviceDataService = DeviceDataService(
-            mockWebServer.url("/").toString(),
-            "pk_test_key",
-            RiskIntegrationType.STANDALONE
-        )
+        val deviceDataService =
+            DeviceDataService(
+                mockWebServer.url("/").toString(),
+                "pk_test_key",
+                RiskIntegrationType.STANDALONE,
+            )
 
         runTest {
             deviceDataService.getConfiguration().let {
@@ -51,52 +53,58 @@ class DeviceDataServiceTest {
         Assert.assertEquals("GET", request.method)
         Assert.assertEquals(
             "/collect/configuration?integrationType=RiskAndroidStandalone",
-            request.path
+            request.path,
         )
     }
 
     @Test
     fun `getConfiguration() should return a network error when unsuccessful`() {
-        val response = MockResponse()
-            .setResponseCode(500)
+        val response =
+            MockResponse()
+                .setResponseCode(500)
 
         mockWebServer.enqueue(response)
 
-        val deviceDataService = DeviceDataService(
-            mockWebServer.url("/").toString(),
-            "pk_test_key",
-            RiskIntegrationType.STANDALONE
-        )
+        val deviceDataService =
+            DeviceDataService(
+                mockWebServer.url("/").toString(),
+                "pk_test_key",
+                RiskIntegrationType.STANDALONE,
+            )
 
         runTest {
             deviceDataService.getConfiguration().let {
-                if (it is NetworkResult.Error)
+                if (it is NetworkResult.Error) {
                     Assert.assertEquals("Server Error", it.message)
+                }
             }
         }
     }
 
     @Test
     fun `persistFpData() should return success when successful`() {
-        val response = MockResponse()
-            .setResponseCode(200)
-            .setBody(MockResponseFileReader("persistFingerprintData_response_200.json").content)
+        val response =
+            MockResponse()
+                .setResponseCode(200)
+                .setBody(MockResponseFileReader("persistFingerprintData_response_200.json").content)
 
         mockWebServer.enqueue(response)
 
-        val deviceDataService = DeviceDataService(
-            mockWebServer.url("/").toString(),
-            "pk_test_key",
-            RiskIntegrationType.STANDALONE
-        )
+        val deviceDataService =
+            DeviceDataService(
+                mockWebServer.url("/").toString(),
+                "pk_test_key",
+                RiskIntegrationType.STANDALONE,
+            )
 
         runTest {
             deviceDataService.persistFingerprintData("fp_data").let {
-                if (it is NetworkResult.Success)
+                if (it is NetworkResult.Success) {
                     Assert.assertEquals(
                         PersistFingerprintDataResponse("1234567890"),
-                        it.data
+                        it.data,
                     )
+                }
             }
         }
 
@@ -105,42 +113,47 @@ class DeviceDataServiceTest {
         Assert.assertEquals("PUT", request.method)
         Assert.assertEquals(
             "/collect/fingerprint",
-            request.path
+            request.path,
         )
 
-        val expected = Gson().toJson(object {
-            val fp_request_id = "fp_data"
-            val integration_type = "RiskAndroidStandalone"
-        })
+        val expected =
+            Gson().toJson(
+                object {
+                    val fp_request_id = "fp_data"
+                    val integration_type = "RiskAndroidStandalone"
+                },
+            )
 
         Assert.assertEquals(
             expected,
-            request.body.readUtf8()
+            request.body.readUtf8(),
         )
     }
 
     @Test
     fun `persistFpData() should throw exception when unsuccessful`() {
-        val response = MockResponse()
-            .setResponseCode(500)
+        val response =
+            MockResponse()
+                .setResponseCode(500)
 
         mockWebServer.enqueue(response)
 
-        val deviceDataService = DeviceDataService(
-            mockWebServer.url("/").toString(),
-            "pk_test_key",
-            RiskIntegrationType.STANDALONE
-        )
+        val deviceDataService =
+            DeviceDataService(
+                mockWebServer.url("/").toString(),
+                "pk_test_key",
+                RiskIntegrationType.STANDALONE,
+            )
 
         runTest {
             deviceDataService.persistFingerprintData("fp_data").let {
-                if (it is NetworkResult.Error)
+                if (it is NetworkResult.Error) {
                     Assert.assertEquals("Server Error", it.message)
+                }
             }
         }
     }
 }
-
 
 class MockResponseFileReader(path: String) {
     val content: String

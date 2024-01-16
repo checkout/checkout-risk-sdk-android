@@ -17,14 +17,15 @@ import kotlin.coroutines.suspendCoroutine
 internal class FingerprintService(
     context: Context,
     fingerprintPublicKey: String,
-    fingerprintEndpoint: String
+    fingerprintEndpoint: String,
 ) {
-    private val client: FingerprintJS = FingerprintJSFactory(context).createInstance(
-        Configuration(
-            apiKey = fingerprintPublicKey,
-            endpointUrl = fingerprintEndpoint
+    private val client: FingerprintJS =
+        FingerprintJSFactory(context).createInstance(
+            Configuration(
+                apiKey = fingerprintPublicKey,
+                endpointUrl = fingerprintEndpoint,
+            ),
         )
-    )
 
     /**
      * Publishes fingerprint data asynchronously.
@@ -40,16 +41,16 @@ internal class FingerprintService(
                 errorListener = {
                     continuation.resume(
                         FingerprintResult.Failure(
-                            it.description ?: "Unknown error"
-                        )
+                            it.description ?: "Unknown error",
+                        ),
                     )
-                }
+                },
             )
         }
 }
 
-
 internal sealed class FingerprintResult {
     data class Success(val requestId: String) : FingerprintResult()
-    data class Failure(val message: String) : FingerprintResult()
+
+    data class Failure(val description: String) : FingerprintResult()
 }
