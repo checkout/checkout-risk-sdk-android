@@ -116,14 +116,14 @@ internal data class PersistFingerprintDataRequest(
     val cardToken: String?,
 )
 
-internal sealed class NetworkResult<T : Any> {
-    class Success<T : Any>(val data: T) : NetworkResult<T>() {
+internal sealed class NetworkResult<out T> {
+    class Success<T>(val data: T) : NetworkResult<T>() {
         override fun toString(): String {
             return "Success(data=$data)"
         }
     }
 
-    class Error<T : Any>(val code: Int, val message: String) : NetworkResult<T>()
+    class Error(val code: Int, val message: String) : NetworkResult<Nothing>()
 
-    class Exception<T : Any>(val e: Throwable) : NetworkResult<T>()
+    class Exception(val e: Throwable) : NetworkResult<Nothing>()
 }
