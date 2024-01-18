@@ -1,47 +1,37 @@
 package com.checkout.risk_sdk_android
 
-data class RiskSDKInternalConfig(
-    private val config: RiskConfig
-) {
-    val merchantPublicKey = config.publicKey
-    val environment = config.environment
-    val integrationType =
-        if (config.framesMode) RiskIntegrationType.FRAMES else RiskIntegrationType.STANDALONE
-    val sourceType: SourceType =
-        if (config.framesMode) SourceType.CARD_TOKEN else SourceType.RISK_SDK
-
-    val deviceDataEndpoint = when (config.environment) {
-        RiskEnvironment.QA -> "https://prism-qa.ckotech.co/collect"
-        RiskEnvironment.SANDBOX -> "https://risk.sandbox.checkout.com/collect"
-        RiskEnvironment.PRODUCTION -> "https://prism-qa.ckotech.co/collect"
+internal fun getDeviceDataEndpoint(environment: RiskEnvironment) =
+    when (environment) {
+        RiskEnvironment.QA -> "https://prism-qa.ckotech.co"
+        RiskEnvironment.SANDBOX -> "https://risk.sandbox.checkout.com"
+        RiskEnvironment.PRODUCTION -> "https://risk.checkout.com"
     }
 
-    val fingerprintEndpoint = when (config.environment) {
+internal fun getFingerprintEndpoint(environment: RiskEnvironment) =
+    when (environment) {
         RiskEnvironment.QA -> "https://fpjs.cko-qa.ckotech.co"
         RiskEnvironment.SANDBOX -> "https://fpjs.sandbox.checkout.com"
         RiskEnvironment.PRODUCTION -> "https://fpjs.checkout.com"
     }
 
-}
-
-data class RiskConfig(
+public data class RiskConfig(
     val publicKey: String,
     val environment: RiskEnvironment,
-    val framesMode: Boolean
+    val framesMode: Boolean,
 )
 
-enum class RiskEnvironment {
+public enum class RiskEnvironment {
     QA,
     SANDBOX,
-    PRODUCTION
+    PRODUCTION,
 }
 
-enum class RiskIntegrationType(val type: String) {
+internal enum class RiskIntegrationType(val type: String) {
     STANDALONE("RiskAndroidStandalone"),
-    FRAMES("RiskAndroidInFramesAndroid")
+    FRAMES("RiskAndroidInFramesAndroid"),
 }
 
-enum class SourceType {
+internal enum class SourceType {
     CARD_TOKEN,
-    RISK_SDK
+    RISK_SDK,
 }
