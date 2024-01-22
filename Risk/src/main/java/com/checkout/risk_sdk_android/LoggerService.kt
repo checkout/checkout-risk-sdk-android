@@ -2,12 +2,13 @@ package com.checkout.risk_sdk_android
 
 import android.content.Context
 import android.os.Build
-//import com.checkout.BuildConfig
+//import com.checkout.BuildConfig as PackageBuildConfig
 import com.checkout.eventlogger.BuildConfig
 import com.checkout.eventlogger.CheckoutEventLogger
 import com.checkout.eventlogger.Environment
 import com.checkout.eventlogger.domain.model.Event
 import com.checkout.eventlogger.domain.model.MonitoringLevel
+import com.checkout.eventlogger.domain.model.RemoteProcessorConfig
 import com.checkout.eventlogger.domain.model.RemoteProcessorMetadata
 import java.util.*
 
@@ -44,45 +45,56 @@ interface LoggerServiceProtocol {
  *
  * @param internalConfig The RiskConfig.
  */
-class LoggerService(private val internalConfig: RiskSDKInternalConfig) : LoggerServiceProtocol {
+class LoggerService(private val internalConfig: RiskSDKInternalConfig, context: Context) :
+    LoggerServiceProtocol {
 
-    private val logger = CheckoutEventLogger(Constants.productName).also {
-//        TODO: Uncomment the next line for debugging
+    private val logger = CheckoutEventLogger(PRODUCT_NAME).also {
 
-//            if (BuildConfig.DEFAULT_LOGCAT_MONITORING_ENABLED) enableLocalProcessor(MonitoringLevel.DEBUG)
-        it.enableLocalProcessor(MonitoringLevel.DEBUG)
+//        if (PackageBuildConfig.DEFAULT_LOGCAT_MONITORING_ENABLED) {
+            it.enableLocalProcessor(MonitoringLevel.DEBUG)
+//        }
+
     }
 
     init {
-        setup()
-    }
-
-    private fun setup() {
 
         val logEnvironment: Environment = when (internalConfig.environment) {
             RiskEnvironment.QA, RiskEnvironment.SANDBOX -> Environment.SANDBOX
             RiskEnvironment.PRODUCTION -> Environment.PRODUCTION
         }
-        val deviceName = getDeviceModel()
-        val appPackageName = "testing"
-        val appPackageVersion = "0.0.1"
-        val appInstallId = "appInstallId"
-        val osVersion = Build.VERSION.RELEASE
 
-        logger.enableRemoteProcessor(
-            environment = logEnvironment,
-            remoteProcessorMetadata = RemoteProcessorMetadata(
-                productIdentifier = Constants.productName,
-                productVersion = Constants.version,
-                environment = internalConfig.environment.rawValue,
-                appPackageName = appPackageName,
-                appPackageVersion = appPackageVersion,
-                appInstallId = appInstallId,
-                deviceName = deviceName,
-                platform = "Android",
-                osVersion = osVersion
+        initialise(context = context, environment = logEnvironment)
+    }
+
+    fun initialise(context: Context, environment: Environment) {
+        environment.toLoggingEnvironment()?.let { loggingEnvironment ->
+            val remoteProcessorMetadata = RemoteProcessorMetadata.from(
+                context,
+                environment.toEnvironmentName().toString(),
+                PRODUCT_IDENTIFIER,
+                PRODUCT_VERSION
             )
-        )
+            val remoteProcessorConfig = RemoteProcessorConfig(
+                loggingEnvironment,
+                sendStackTraceData = false,
+            )
+            logger.enableRemoteProcessor(
+                remoteProcessorConfig,
+                remoteProcessorMetadata
+            )
+        }
+    }
+
+    internal fun Environment.toEnvironmentName() = when (this) {
+        is Environment.SANDBOX -> "sandbox"
+        is Environment.PRODUCTION -> "production"
+        else -> null
+    }
+
+    internal fun Environment.toLoggingEnvironment() = when (this) {
+        is Environment.SANDBOX -> Environment.SANDBOX
+        is Environment.PRODUCTION -> Environment.PRODUCTION
+        else -> null
     }
 
     override fun log(
@@ -107,6 +119,7 @@ class LoggerService(private val internalConfig: RiskSDKInternalConfig) : LoggerS
             return properties.toString()
         }
     }
+
     private fun formatEvent(
         riskEvent: RiskEvent,
         deviceSessionID: String?,
@@ -122,9 +135,6 @@ class LoggerService(private val internalConfig: RiskSDKInternalConfig) : LoggerS
             RiskEvent.PUBLISH_FAILURE, RiskEvent.LOAD_FAILURE -> MonitoringLevel.ERROR
             RiskEvent.PUBLISH_DISABLED -> MonitoringLevel.WARN
         }
-
-        // TODO: Uncomment the next line for debugging
-//        if (BuildConfig.DEFAULT_LOGCAT_MONITORING_ENABLED) monitoringLevel = MonitoringLevel.DEBUG
 
         val properties: Map<String, Any> = when (riskEvent) {
             RiskEvent.PUBLISHED, RiskEvent.COLLECTED -> mapOf(
@@ -160,16 +170,4 @@ class LoggerService(private val internalConfig: RiskSDKInternalConfig) : LoggerS
     private fun getDDTags(environment: String): String {
         return "team:prism,service:prism.risk.android,version:${Constants.version},env:$environment"
     }
-
-    private fun getDeviceModel(): String {
-        return Build.MODEL
-    }
-
-    fun toLoggingName(environment: Environment) {
-        when (environment) {
-            Environment.PRODUCTION -> "production"
-            Environment.SANDBOX -> "sandbox"
-        }
-    }
-
 }
