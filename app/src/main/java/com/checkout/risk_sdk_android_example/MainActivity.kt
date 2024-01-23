@@ -29,7 +29,6 @@ import com.checkout.risk_sdk_android.PublishDataResult
 import com.checkout.risk_sdk_android.Risk
 import com.checkout.risk_sdk_android.RiskConfig
 import com.checkout.risk_sdk_android.RiskEnvironment
-import com.checkout.risk_sdk_android.RiskInitialisationResult
 import com.checkout.risk_sdk_android_example.ui.theme.RisksdkandroidTheme
 import kotlinx.coroutines.launch
 

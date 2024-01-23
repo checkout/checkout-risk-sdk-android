@@ -82,17 +82,11 @@ internal class RiskInternal(
             }
 
             is FingerprintResult.Failure -> {
-                loggerService.log(riskEvent = RiskEvent.PUBLISH_FAILURE, error = RiskLogError(reason="publishData", message=fingerprintResult.message, status=null, type="Fingerprint Service Error"))
-                 PublishDataResult.Failure(fingerprintResult.message)
+                loggerService.log(riskEvent = RiskEvent.PUBLISH_FAILURE, error = RiskLogError(reason="publishData", message=fingerprintResult.description, status=null, type="Fingerprint Service Error"))
+                 PublishDataResult.Failure(fingerprintResult.description)
             }
         }
 
-}
-
-sealed class RiskInitialisationResult {
-    data class Success(val risk: Risk) : RiskInitialisationResult()
-    data object IntegrationDisabled : RiskInitialisationResult()
-    data class Failure(val message: String) : RiskInitialisationResult()
 }
 
 public sealed class PublishDataResult {
