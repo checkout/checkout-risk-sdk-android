@@ -1,24 +1,12 @@
 package com.checkout.risk_sdk_android
 
-fun getDeviceDataEndpoint(environment: RiskEnvironment) = when (environment) {
-    RiskEnvironment.QA -> "https://prism-qa.ckotech.co"
-    RiskEnvironment.SANDBOX -> "https://risk.sandbox.checkout.com"
-    RiskEnvironment.PRODUCTION -> "https://risk.checkout.com"
-}
-
-fun getFingerprintEndpoint(environment: RiskEnvironment) = when (environment) {
-    RiskEnvironment.QA -> "https://fpjs.cko-qa.ckotech.co"
-    RiskEnvironment.SANDBOX -> "https://fpjs.sandbox.checkout.com"
-    RiskEnvironment.PRODUCTION -> "https://fpjs.checkout.com"
-}
-
 data class RiskConfig(
     val publicKey: String,
     val environment: RiskEnvironment,
     val framesMode: Boolean
 )
 
-data class RiskSDKInternalConfig(
+internal data class RiskSDKInternalConfig(
     val config: RiskConfig
 ) {
     var merchantPublicKey: String = config.publicKey
@@ -26,13 +14,10 @@ data class RiskSDKInternalConfig(
     val environment: RiskEnvironment = config.environment
     val deviceDataEndpoint: String
     val fingerprintEndpoint: String
-    val integrationType: RiskIntegrationType
-    val sourceType: SourceType
+    val integrationType: RiskIntegrationType = if (framesMode) RiskIntegrationType.FRAMES else RiskIntegrationType.STANDALONE
+    val sourceType: SourceType = if (framesMode) SourceType.CARD_TOKEN else SourceType.RISK_SDK
 
     init {
-        integrationType = if (framesMode) RiskIntegrationType.FRAMES else RiskIntegrationType.STANDALONE
-        sourceType = if (framesMode) SourceType.CARD_TOKEN else SourceType.RISK_SDK
-
         when (environment) {
             RiskEnvironment.QA -> {
                 deviceDataEndpoint = "https://prism-qa.ckotech.co"
@@ -56,12 +41,12 @@ enum class RiskEnvironment(val rawValue: String) {
     PRODUCTION("prod")
 }
 
-enum class RiskIntegrationType(val type: String) {
+internal enum class RiskIntegrationType(val type: String) {
     STANDALONE("RiskAndroidStandalone"),
     FRAMES("RiskAndroidInFramesAndroid")
 }
 
-enum class SourceType(val type: String) {
+internal enum class SourceType(val type: String) {
     CARD_TOKEN("card_token"),
     RISK_SDK("riskandroid")
 }
