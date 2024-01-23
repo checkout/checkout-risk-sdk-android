@@ -18,10 +18,42 @@ data class RiskConfig(
     val framesMode: Boolean
 )
 
-enum class RiskEnvironment {
-    QA,
-    SANDBOX,
-    PRODUCTION
+data class RiskSDKInternalConfig(
+    val config: RiskConfig
+) {
+    var merchantPublicKey: String = config.publicKey
+    val framesMode: Boolean = config.framesMode
+    val environment: RiskEnvironment = config.environment
+    val deviceDataEndpoint: String
+    val fingerprintEndpoint: String
+    val integrationType: RiskIntegrationType
+    val sourceType: SourceType
+
+    init {
+        integrationType = if (framesMode) RiskIntegrationType.FRAMES else RiskIntegrationType.STANDALONE
+        sourceType = if (framesMode) SourceType.CARD_TOKEN else SourceType.RISK_SDK
+
+        when (environment) {
+            RiskEnvironment.QA -> {
+                deviceDataEndpoint = "https://prism-qa.ckotech.co"
+                fingerprintEndpoint = "https://fpjs.cko-qa.ckotech.co"
+            }
+            RiskEnvironment.SANDBOX -> {
+                deviceDataEndpoint = "https://risk.sandbox.checkout.com"
+                fingerprintEndpoint = "https://fpjs.sandbox.checkout.com"
+            }
+            RiskEnvironment.PRODUCTION -> {
+                deviceDataEndpoint = "https://risk.checkout.com"
+                fingerprintEndpoint = "https://fpjs.checkout.com"
+            }
+        }
+    }
+}
+
+enum class RiskEnvironment(val rawValue: String) {
+    QA("qa"),
+    SANDBOX("sandbox"),
+    PRODUCTION("prod")
 }
 
 enum class RiskIntegrationType(val type: String) {
@@ -29,7 +61,7 @@ enum class RiskIntegrationType(val type: String) {
     FRAMES("RiskAndroidInFramesAndroid")
 }
 
-enum class SourceType {
-    CARD_TOKEN,
-    RISK_SDK
+enum class SourceType(val type: String) {
+    CARD_TOKEN("card_token"),
+    RISK_SDK("riskandroid")
 }
