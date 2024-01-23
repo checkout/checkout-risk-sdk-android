@@ -40,16 +40,16 @@ internal class FingerprintService(
                 errorListener = {
                     continuation.resume(
                         FingerprintResult.Failure(
-                            it.description ?: "Unknown error"
-                        )
+                            it.description ?: "Unknown error",
+                        ),
                     )
-                }
+                },
             )
         }
 }
 
-
 internal sealed class FingerprintResult {
     data class Success(val requestId: String) : FingerprintResult()
-    data class Failure(val message: String) : FingerprintResult()
+
+    data class Failure(val description: String) : FingerprintResult()
 }

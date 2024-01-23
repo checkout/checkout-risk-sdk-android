@@ -28,9 +28,10 @@ internal class DeviceDataService(
      *
      * @return Result containing the FingerprintIntegration on success, or an exception on failure.
      */
-    suspend fun getConfiguration(): NetworkResult<DeviceDataConfiguration> = executeApiCall {
-        deviceDataApi.getConfiguration(merchantPublicKey, integrationType.type)
-    }
+    suspend fun getConfiguration(): NetworkResult<DeviceDataConfiguration> =
+        executeApiCall {
+            deviceDataApi.getConfiguration(merchantPublicKey, integrationType.type)
+        }
 
     /**
      * Persists the fingerprint data.
@@ -43,13 +44,15 @@ internal class DeviceDataService(
         executeApiCall {
             deviceDataApi.persistFingerprintData(
                 merchantPublicKey,
-                PersistFingerprintDataRequest(requestId, integrationType.type, null)
+                PersistFingerprintDataRequest(
+                    fpRequestId = requestId,
+                    integrationType = integrationType.type,
+                    cardToken = null,
+                ),
             )
         }
 
-    private suspend fun <T : Any> executeApiCall(
-        execute: suspend () -> Response<T>
-    ): NetworkResult<T> {
+    private suspend fun <T : Any> executeApiCall(execute: suspend () -> Response<T>): NetworkResult<T> {
         return try {
             val response = execute()
             val body = response.body()
@@ -83,22 +86,21 @@ private sealed interface DeviceDataApi {
     @PUT("/collect/fingerprint")
     suspend fun persistFingerprintData(
         @Header("Authorization") authHeader: String,
-        @Body fingerprintData: PersistFingerprintDataRequest
+        @Body fingerprintData: PersistFingerprintDataRequest,
     ): Response<PersistFingerprintDataResponse>
 }
 
 internal data class DeviceDataConfiguration(
     @SerializedName("fingerprint_integration")
-    val fingerprintIntegration: FingerprintIntegration
+    val fingerprintIntegration: FingerprintIntegration,
 )
 
 internal data class FingerprintIntegration(
     @SerializedName("enabled")
     val enabled: Boolean,
     @SerializedName("public_key")
-    val publicKey: String?
+    val publicKey: String?,
 )
-
 
 internal data class PersistFingerprintDataResponse(
     @SerializedName("device_session_id")
@@ -114,13 +116,14 @@ internal data class PersistFingerprintDataRequest(
     val cardToken: String?,
 )
 
-internal sealed class NetworkResult<T : Any> {
-    class Success<T : Any>(val data: T) : NetworkResult<T>() {
+internal sealed class NetworkResult<out T> {
+    class Success<T>(val data: T) : NetworkResult<T>() {
         override fun toString(): String {
             return "Success(data=$data)"
         }
     }
 
-    class Error<T : Any>(val code: Int, val message: String) : NetworkResult<T>()
-    class Exception<T : Any>(val e: Throwable) : NetworkResult<T>()
+    class Error(val code: Int, val message: String) : NetworkResult<Nothing>()
+
+    class Exception(val e: Throwable) : NetworkResult<Nothing>()
 }

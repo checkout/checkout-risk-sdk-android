@@ -1,9 +1,9 @@
 package com.checkout.risk_sdk_android
 
-data class RiskConfig(
+public data class RiskConfig(
     val publicKey: String,
     val environment: RiskEnvironment,
-    val framesMode: Boolean
+    val framesMode: Boolean,
 )
 
 internal data class RiskSDKInternalConfig(
@@ -43,7 +43,7 @@ enum class RiskEnvironment(val rawValue: String) {
 
 internal enum class RiskIntegrationType(val type: String) {
     STANDALONE("RiskAndroidStandalone"),
-    FRAMES("RiskAndroidInFramesAndroid")
+    FRAMES("RiskAndroidInFramesAndroid"),
 }
 
 internal enum class SourceType(val type: String) {
