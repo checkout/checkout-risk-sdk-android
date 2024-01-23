@@ -1,9 +1,8 @@
 package com.checkout.risk_sdk_android
 
 import android.content.Context
-import android.os.Build
-//import com.checkout.BuildConfig as PackageBuildConfig
-import com.checkout.eventlogger.BuildConfig
+import com.checkout.risk_sdk_android.BuildConfig as RiskBuildConfig
+import com.checkout.eventlogger.BuildConfig as CKOEventLoggerBuildConfig
 import com.checkout.eventlogger.CheckoutEventLogger
 import com.checkout.eventlogger.Environment
 import com.checkout.eventlogger.domain.model.Event
@@ -13,8 +12,8 @@ import com.checkout.eventlogger.domain.model.RemoteProcessorMetadata
 import java.util.*
 
 private const val PRODUCT_NAME = Constants.productName
-private const val PRODUCT_IDENTIFIER = "com.checkout.risk_sdk_android"
-private const val PRODUCT_VERSION = BuildConfig.PRODUCT_VERSION
+private const val PRODUCT_IDENTIFIER = RiskBuildConfig.LIBRARY_PACKAGE_NAME
+private const val PRODUCT_VERSION = CKOEventLoggerBuildConfig.PRODUCT_VERSION
 
 enum class RiskEvent(val rawValue: String) {
     PUBLISH_DISABLED("riskDataPublishDisabled"),
@@ -28,7 +27,7 @@ data class RiskLogError(
     val reason: String, // service method
     val message: String, // description of error
     val status: Int?, // status code
-    val type: String? // Error type
+    val type: String?, // Error type
 )
 
 interface LoggerServiceProtocol {
@@ -36,7 +35,7 @@ interface LoggerServiceProtocol {
         riskEvent: RiskEvent,
         deviceSessionID: String? = null,
         requestID: String? = null,
-        error: RiskLogError? = null
+        error: RiskLogError? = null,
     )
 }
 
@@ -50,9 +49,9 @@ class LoggerService(private val internalConfig: RiskSDKInternalConfig, context: 
 
     private val logger = CheckoutEventLogger(PRODUCT_NAME).also {
 
-//        if (PackageBuildConfig.DEFAULT_LOGCAT_MONITORING_ENABLED) {
-            it.enableLocalProcessor(MonitoringLevel.DEBUG)
-//        }
+       if (RiskBuildConfig.DEFAULT_LOGCAT_MONITORING_ENABLED) {
+           it.enableLocalProcessor(MonitoringLevel.DEBUG)
+       }
 
     }
 
@@ -66,7 +65,7 @@ class LoggerService(private val internalConfig: RiskSDKInternalConfig, context: 
         initialise(context = context, environment = logEnvironment)
     }
 
-    fun initialise(context: Context, environment: Environment) {
+    private fun initialise(context: Context, environment: Environment) {
         environment.toLoggingEnvironment()?.let { loggingEnvironment ->
             val remoteProcessorMetadata = RemoteProcessorMetadata.from(
                 context,
@@ -107,12 +106,11 @@ class LoggerService(private val internalConfig: RiskSDKInternalConfig, context: 
 
         logger.logEvent(event)
     }
-
-    data class SampleEvent(
+    data class LoggingEvent(
         override val monitoringLevel: MonitoringLevel,
-        override val properties: Map<String, Any>,
-        override val time: Date,
-        override val typeIdentifier: String
+        override val properties: Map<String, Any> = emptyMap(),
+        override val time: Date = Date(),
+        override val typeIdentifier: String,
     ) : Event {
 
         override fun asSummary(): String {
@@ -155,10 +153,9 @@ class LoggerService(private val internalConfig: RiskSDKInternalConfig, context: 
             ).filterValues { it != null }.mapValues { it.value!! }
         }
 
-        return SampleEvent(
+        return LoggingEvent(
             monitoringLevel = monitoringLevel,
             properties = properties,
-            time = Date(),
             typeIdentifier = Constants.loggerTypeIdentifier
         )
     }
@@ -168,6 +165,6 @@ class LoggerService(private val internalConfig: RiskSDKInternalConfig, context: 
     }
 
     private fun getDDTags(environment: String): String {
-        return "team:prism,service:prism.risk.android,version:${Constants.version},env:$environment"
+        return "team:prism,service:prism.risk.android,version:${Constants.riskPackageVersion},env:$environment"
     }
 }
