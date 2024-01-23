@@ -10,37 +10,40 @@ class Risk private constructor(private val riskInternal: RiskInternal) {
         suspend fun getInstance(
             applicationContext: Context,
             config: RiskConfig
-        ): RiskInitialisationResult {
+        ): Risk? {
             riskInstance?.let {
-                return RiskInitialisationResult.Success(it)
+                return it
             }
 
-            deviceDataService = DeviceDataService(
-                getDeviceDataEndpoint(config.environment),
-                config.publicKey,
-                if (config.framesMode) RiskIntegrationType.FRAMES else RiskIntegrationType.STANDALONE
-            )
+            val internalConfig = RiskSDKInternalConfig(config)
+            val loggerService = LoggerService(internalConfig, applicationContext)
+            deviceDataService = DeviceDataService(internalConfig)
 
             when (val deviceDataConfig = deviceDataService.getConfiguration()) {
                 is NetworkResult.Success -> {
+                    if (!deviceDataConfig.data.fingerprintIntegration.enabled || deviceDataConfig.data.fingerprintIntegration.publicKey?.isEmpty() == true) {
+                        loggerService.log(riskEvent = RiskEvent.PUBLISH_DISABLED, error = RiskLogError(reason="getConfiguration", message="Fingerprint integration disabled", status=null, type="Device Data Service Error"))
+                        return null
+                    }
+
                     val fingerprintService = FingerprintService(
                         applicationContext,
+                        internalConfig,
                         deviceDataConfig.data.fingerprintIntegration.publicKey!!,
-                        getFingerprintEndpoint(config.environment)
                     )
 
-                    riskInstance = Risk(RiskInternal(fingerprintService, deviceDataService))
+                    return Risk(RiskInternal(fingerprintService, deviceDataService, loggerService))
 
-                    if (!deviceDataConfig.data.fingerprintIntegration.enabled)
-                        return RiskInitialisationResult.IntegrationDisabled
-
-                    return RiskInitialisationResult.Success(riskInstance!!)
                 }
 
-                is NetworkResult.Error -> return RiskInitialisationResult.Failure(deviceDataConfig.message)
-                is NetworkResult.Exception -> return RiskInitialisationResult.Failure(
-                    deviceDataConfig.e.message ?: "Unknown error"
-                )
+                is NetworkResult.Error -> {
+                    loggerService.log(riskEvent = RiskEvent.LOAD_FAILURE, error = RiskLogError(reason="getConfiguration", message=deviceDataConfig.message, status=null, type="Device Data Service Error"))
+                    return null
+                }
+                is NetworkResult.Exception -> {
+                    loggerService.log(riskEvent = RiskEvent.LOAD_FAILURE, error = RiskLogError(reason="getConfiguration", message=deviceDataConfig.e.message ?: "Unknown error", status=null, type="Device Data Service Error"))
+                    return null
+                }
             }
         }
     }
@@ -52,32 +55,38 @@ class Risk private constructor(private val riskInternal: RiskInternal) {
 
 internal class RiskInternal(
     private val fingerprintService: FingerprintService,
-    private val deviceDataService: DeviceDataService
+    private val deviceDataService: DeviceDataService,
+    private val loggerService: LoggerServiceProtocol
 ) {
-    suspend fun publishData(): PublishDataResult {
-        return when (val fingerprintResult = fingerprintService.publishData()) {
+    suspend fun publishData(): PublishDataResult =
+        when (val fingerprintResult = fingerprintService.publishData()) {
             is FingerprintResult.Success -> {
+                loggerService.log(riskEvent = RiskEvent.COLLECTED, requestID = fingerprintResult.requestId)
                 when (val persistResult =
                     deviceDataService.persistFingerprintData(fingerprintResult.requestId)) {
                     is NetworkResult.Success -> {
-                        return PublishDataResult.Success(persistResult.data.deviceSessionId)
+                        loggerService.log(riskEvent = RiskEvent.PUBLISHED, requestID = fingerprintResult.requestId, deviceSessionID = persistResult.data.deviceSessionId)
+                         PublishDataResult.Success(persistResult.data.deviceSessionId)
                     }
 
                     is NetworkResult.Error -> {
-                        return PublishDataResult.Failure(persistResult.message)
+                        loggerService.log(riskEvent = RiskEvent.PUBLISH_FAILURE, error = RiskLogError(reason="persistFingerprintData", message=persistResult.message, status=null, type="Device Data Service Error"))
+                         PublishDataResult.Failure(persistResult.message)
                     }
 
                     is NetworkResult.Exception -> {
-                        return PublishDataResult.Exception(persistResult.e)
+                        loggerService.log(riskEvent = RiskEvent.PUBLISH_FAILURE, error = RiskLogError(reason="persistFingerprintData", message=persistResult.e.message ?: "Unknown error", status=persistResult.e.hashCode(), type="Device Data Service Error"))
+                         PublishDataResult.Exception(persistResult.e)
                     }
                 }
             }
 
             is FingerprintResult.Failure -> {
-                return PublishDataResult.Failure(fingerprintResult.message)
+                loggerService.log(riskEvent = RiskEvent.PUBLISH_FAILURE, error = RiskLogError(reason="publishData", message=fingerprintResult.message, status=null, type="Fingerprint Service Error"))
+                 PublishDataResult.Failure(fingerprintResult.message)
             }
         }
-    }
+
 }
 
 sealed class RiskInitialisationResult {

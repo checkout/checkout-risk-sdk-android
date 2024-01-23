@@ -85,23 +85,9 @@ fun MyScreen(context: Context) {
                     false
                 )
             ).let {
-                when (it) {
-                    is RiskInitialisationResult.Success -> {
-                        status = DataFetchStatus.IDLE
-                        it.risk
-                    }
-
-                    is RiskInitialisationResult.Failure -> {
-                        status = DataFetchStatus.ERROR
-                        status.setError(it.message)
-                        null
-                    }
-
-                    is RiskInitialisationResult.IntegrationDisabled -> {
-                        status = DataFetchStatus.ERROR
-                        status.setError("integration disabled")
-                        null
-                    }
+                it?.let {
+                    status = DataFetchStatus.IDLE
+                    return@let it
                 }
             }
     }
