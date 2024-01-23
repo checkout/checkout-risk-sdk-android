@@ -21,7 +21,26 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+
+            buildConfigField(
+                "Boolean",
+                "DEFAULT_LOGCAT_MONITORING_ENABLED",
+                "false",
+            )
         }
+
+        debug {
+            buildConfigField(
+                "Boolean",
+                "DEFAULT_LOGCAT_MONITORING_ENABLED",
+                "true",
+            )
+        }
+
+         buildFeatures {
+//             viewBinding = true
+             buildConfig = true
+         }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
@@ -45,6 +64,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.fingerprint.android:pro:2.3.4")
+    implementation("com.checkout:checkout-sdk-event-logger-android:2.0.2")
     implementation("com.google.android.material:material:1.10.0")
 
     testImplementation("junit:junit:4.13.2")
