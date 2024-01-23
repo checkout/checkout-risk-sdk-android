@@ -12,7 +12,7 @@ import kotlin.coroutines.suspendCoroutine
  *
  * @param context The Android context.
  * @param fingerprintPublicKey The API key for FingerprintJS.
- * @param fingerprintEndpoint The endpoint for FingerprintJS.
+ * @param internalConfig The Internal config for the SDK (RiskSDKInternalConfig).
  */
 internal class FingerprintService(
     context: Context,

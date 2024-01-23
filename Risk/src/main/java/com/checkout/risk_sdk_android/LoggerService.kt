@@ -15,7 +15,7 @@ private const val PRODUCT_NAME = Constants.productName
 private const val PRODUCT_IDENTIFIER = RiskBuildConfig.LIBRARY_PACKAGE_NAME
 private const val PRODUCT_VERSION = CKOEventLoggerBuildConfig.PRODUCT_VERSION
 
-enum class RiskEvent(val rawValue: String) {
+internal enum class RiskEvent(val rawValue: String) {
     PUBLISH_DISABLED("riskDataPublishDisabled"),
     PUBLISHED("riskDataPublished"),
     PUBLISH_FAILURE("riskDataPublishFailure"),
@@ -30,7 +30,7 @@ data class RiskLogError(
     val type: String?, // Error type
 )
 
-interface LoggerServiceProtocol {
+internal interface LoggerServiceProtocol {
     fun log(
         riskEvent: RiskEvent,
         deviceSessionID: String? = null,
@@ -44,7 +44,7 @@ interface LoggerServiceProtocol {
  *
  * @param internalConfig The RiskConfig.
  */
-class LoggerService(private val internalConfig: RiskSDKInternalConfig, context: Context) :
+internal class LoggerService(private val internalConfig: RiskSDKInternalConfig, context: Context) :
     LoggerServiceProtocol {
 
     private val logger = CheckoutEventLogger(PRODUCT_NAME).also {
@@ -84,13 +84,13 @@ class LoggerService(private val internalConfig: RiskSDKInternalConfig, context: 
         }
     }
 
-    internal fun Environment.toEnvironmentName() = when (this) {
+    private fun Environment.toEnvironmentName() = when (this) {
         is Environment.SANDBOX -> "sandbox"
         is Environment.PRODUCTION -> "production"
         else -> null
     }
 
-    internal fun Environment.toLoggingEnvironment() = when (this) {
+    private fun Environment.toLoggingEnvironment() = when (this) {
         is Environment.SANDBOX -> Environment.SANDBOX
         is Environment.PRODUCTION -> Environment.PRODUCTION
         else -> null
@@ -106,7 +106,7 @@ class LoggerService(private val internalConfig: RiskSDKInternalConfig, context: 
 
         logger.logEvent(event)
     }
-    data class LoggingEvent(
+    private data class LoggingEvent(
         override val monitoringLevel: MonitoringLevel,
         override val properties: Map<String, Any> = emptyMap(),
         override val time: Date = Date(),
