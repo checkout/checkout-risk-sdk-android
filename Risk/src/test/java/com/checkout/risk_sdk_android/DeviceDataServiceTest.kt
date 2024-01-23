@@ -30,12 +30,15 @@ class DeviceDataServiceTest {
             .setBody(MockResponseFileReader("getConfiguration_response_200.json").content)
 
         mockWebServer.enqueue(response)
-
-        val deviceDataService = DeviceDataService(
-            mockWebServer.url("/").toString(),
-            "pk_test_key",
-            RiskIntegrationType.STANDALONE
+        val internalConfig = RiskSDKInternalConfig(
+            RiskConfig(
+                publicKey = "pk_test_key",
+                environment = RiskEnvironment.QA,
+                framesMode = false
+            )
         )
+
+        val deviceDataService = DeviceDataService(internalConfig)
 
         runTest {
             deviceDataService.getConfiguration().let {
@@ -61,12 +64,15 @@ class DeviceDataServiceTest {
             .setResponseCode(500)
 
         mockWebServer.enqueue(response)
-
-        val deviceDataService = DeviceDataService(
-            mockWebServer.url("/").toString(),
-            "pk_test_key",
-            RiskIntegrationType.STANDALONE
+        val internalConfig = RiskSDKInternalConfig(
+            RiskConfig(
+                publicKey = "pk_test_key",
+                environment = RiskEnvironment.QA,
+                framesMode = false
+            )
         )
+
+        val deviceDataService = DeviceDataService(internalConfig)
 
         runTest {
             deviceDataService.getConfiguration().let {
@@ -84,11 +90,15 @@ class DeviceDataServiceTest {
 
         mockWebServer.enqueue(response)
 
-        val deviceDataService = DeviceDataService(
-            mockWebServer.url("/").toString(),
-            "pk_test_key",
-            RiskIntegrationType.STANDALONE
+        val internalConfig = RiskSDKInternalConfig(
+            RiskConfig(
+                publicKey = "pk_test_key",
+                environment = RiskEnvironment.QA,
+                framesMode = false
+            )
         )
+
+        val deviceDataService = DeviceDataService(internalConfig)
 
         runTest {
             deviceDataService.persistFingerprintData("fp_data").let {
@@ -126,11 +136,14 @@ class DeviceDataServiceTest {
 
         mockWebServer.enqueue(response)
 
-        val deviceDataService = DeviceDataService(
-            mockWebServer.url("/").toString(),
-            "pk_test_key",
-            RiskIntegrationType.STANDALONE
+        val internalConfig = RiskSDKInternalConfig(
+            RiskConfig(
+                publicKey = "pk_test_key",
+                environment = RiskEnvironment.QA,
+                framesMode = false
+            )
         )
+        val deviceDataService = DeviceDataService(internalConfig)
 
         runTest {
             deviceDataService.persistFingerprintData("fp_data").let {

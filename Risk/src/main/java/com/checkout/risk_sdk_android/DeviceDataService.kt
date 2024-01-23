@@ -17,11 +17,11 @@ import retrofit2.http.Query
  * @param integrationType The integration type.
  * */
 internal class DeviceDataService(
-    deviceDataEndpoint: String,
-    private val merchantPublicKey: String,
-    private val integrationType: RiskIntegrationType
+    internalConfig: RiskSDKInternalConfig,
 ) {
-    private val deviceDataApi = DeviceDataApi(deviceDataEndpoint)
+    private val deviceDataApi = DeviceDataApi(internalConfig.deviceDataEndpoint)
+    private val merchantPublicKey = internalConfig.merchantPublicKey
+    private val integrationType = internalConfig.integrationType
 
     /**
      * Retrieves the device data configuration.

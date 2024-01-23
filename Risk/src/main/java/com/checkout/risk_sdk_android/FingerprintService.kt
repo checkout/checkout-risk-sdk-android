@@ -16,13 +16,13 @@ import kotlin.coroutines.suspendCoroutine
  */
 internal class FingerprintService(
     context: Context,
-    fingerprintPublicKey: String,
-    fingerprintEndpoint: String
+    internalConfig: RiskSDKInternalConfig,
+    fingerprintPublicKey: String
 ) {
     private val client: FingerprintJS = FingerprintJSFactory(context).createInstance(
         Configuration(
             apiKey = fingerprintPublicKey,
-            endpointUrl = fingerprintEndpoint
+            endpointUrl = internalConfig.fingerprintEndpoint
         )
     )
 
