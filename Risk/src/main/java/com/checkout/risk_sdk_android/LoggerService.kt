@@ -23,7 +23,7 @@ internal enum class RiskEvent(val rawValue: String) {
     LOAD_FAILURE("riskLoadFailure")
 }
 
-data class RiskLogError(
+internal data class RiskLogError(
     val reason: String, // service method
     val message: String, // description of error
     val status: Int?, // status code

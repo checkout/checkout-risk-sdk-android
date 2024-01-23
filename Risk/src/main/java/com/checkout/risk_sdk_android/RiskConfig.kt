@@ -35,7 +35,7 @@ internal data class RiskSDKInternalConfig(
     }
 }
 
-enum class RiskEnvironment(val rawValue: String) {
+public enum class RiskEnvironment(public val rawValue: String) {
     QA("qa"),
     SANDBOX("sandbox"),
     PRODUCTION("prod")
