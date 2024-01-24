@@ -46,7 +46,7 @@ internal enum class RiskIntegrationType(val type: String) {
     FRAMES("RiskAndroidInFramesAndroid"),
 }
 
-internal enum class SourceType(val type: String) {
+internal enum class SourceType(val rawValue: String) {
     CARD_TOKEN("card_token"),
     RISK_SDK("riskandroid")
 }

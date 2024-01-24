@@ -19,6 +19,7 @@ internal class FingerprintService(
     internalConfig: RiskSDKInternalConfig,
     fingerprintPublicKey: String
 ) {
+    private val internalConfig = internalConfig
     private val client: FingerprintJS = FingerprintJSFactory(context).createInstance(
         Configuration(
             apiKey = fingerprintPublicKey,
@@ -34,6 +35,7 @@ internal class FingerprintService(
     suspend fun publishData(): FingerprintResult =
         suspendCoroutine { continuation ->
             client.getVisitorId(
+                tags = generateMetaData(),
                 listener = {
                     continuation.resume(FingerprintResult.Success(it.requestId))
                 },
@@ -46,6 +48,10 @@ internal class FingerprintService(
                 },
             )
         }
+
+    private fun generateMetaData(): Map<String, Any> {
+        return mapOf("fpjsSource" to internalConfig.sourceType.rawValue, "fpjsTimestamp" to System.currentTimeMillis().toString())
+    }
 }
 
 internal sealed class FingerprintResult {
