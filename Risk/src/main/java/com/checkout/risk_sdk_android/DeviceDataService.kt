@@ -12,16 +12,14 @@ import retrofit2.http.Query
 /**
  * Service for retrieving device data configuration.
  *
- * @param deviceDataEndpoint The endpoint for retrieving device data configuration.
- * @param merchantPublicKey The merchant public key.
- * @param integrationType The integration type.
+ * @param internalConfig The RiskSDKInternalConfig type.
  * */
 internal class DeviceDataService(
-    deviceDataEndpoint: String,
-    private val merchantPublicKey: String,
-    private val integrationType: RiskIntegrationType,
+    internalConfig: RiskSDKInternalConfig,
 ) {
-    private val deviceDataApi = DeviceDataApi(deviceDataEndpoint)
+    private val deviceDataApi = DeviceDataApi(internalConfig.deviceDataEndpoint)
+    private val merchantPublicKey = internalConfig.merchantPublicKey
+    private val integrationType = internalConfig.integrationType
 
     /**
      * Retrieves the device data configuration.
@@ -40,14 +38,14 @@ internal class DeviceDataService(
      *
      * @return Result containing PersistFingerprintDataResponse on success, or an exception on failure.
      */
-    suspend fun persistFingerprintData(requestId: String): NetworkResult<PersistFingerprintDataResponse> =
+    suspend fun persistFingerprintData(requestId: String, cardToken: String?): NetworkResult<PersistFingerprintDataResponse> =
         executeApiCall {
             deviceDataApi.persistFingerprintData(
                 merchantPublicKey,
                 PersistFingerprintDataRequest(
                     fpRequestId = requestId,
                     integrationType = integrationType.type,
-                    cardToken = null,
+                    cardToken = cardToken,
                 ),
             )
         }

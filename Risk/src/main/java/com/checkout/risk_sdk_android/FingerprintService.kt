@@ -12,20 +12,19 @@ import kotlin.coroutines.suspendCoroutine
  *
  * @param context The Android context.
  * @param fingerprintPublicKey The API key for FingerprintJS.
- * @param fingerprintEndpoint The endpoint for FingerprintJS.
+ * @param internalConfig The Internal config for the SDK (RiskSDKInternalConfig).
  */
 internal class FingerprintService(
     context: Context,
-    fingerprintPublicKey: String,
-    fingerprintEndpoint: String,
+    private val internalConfig: RiskSDKInternalConfig,
+    fingerprintPublicKey: String
 ) {
-    private val client: FingerprintJS =
-        FingerprintJSFactory(context).createInstance(
-            Configuration(
-                apiKey = fingerprintPublicKey,
-                endpointUrl = fingerprintEndpoint,
-            ),
+    private val client: FingerprintJS = FingerprintJSFactory(context).createInstance(
+        Configuration(
+            apiKey = fingerprintPublicKey,
+            endpointUrl = internalConfig.fingerprintEndpoint
         )
+    )
 
     /**
      * Publishes fingerprint data asynchronously.
@@ -35,6 +34,7 @@ internal class FingerprintService(
     suspend fun publishData(): FingerprintResult =
         suspendCoroutine { continuation ->
             client.getVisitorId(
+                tags = generateMetaData(),
                 listener = {
                     continuation.resume(FingerprintResult.Success(it.requestId))
                 },
@@ -47,6 +47,10 @@ internal class FingerprintService(
                 },
             )
         }
+
+    private fun generateMetaData(): Map<String, String> {
+        return mapOf("fpjsSource" to internalConfig.sourceType.rawValue, "fpjsTimestamp" to System.currentTimeMillis().toString())
+    }
 }
 
 internal sealed class FingerprintResult {
