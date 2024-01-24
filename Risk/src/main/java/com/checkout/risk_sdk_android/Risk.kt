@@ -48,8 +48,8 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
         }
     }
 
-    public suspend fun publishData(): PublishDataResult {
-        return riskInternal.publishData()
+    public suspend fun publishData(cardToken: String? = null): PublishDataResult {
+        return riskInternal.publishData(cardToken)
     }
 }
 
@@ -58,12 +58,12 @@ internal class RiskInternal(
     private val deviceDataService: DeviceDataService,
     private val loggerService: LoggerServiceProtocol
 ) {
-    suspend fun publishData(): PublishDataResult =
+    suspend fun publishData(cardToken: String?): PublishDataResult =
         when (val fingerprintResult = fingerprintService.publishData()) {
             is FingerprintResult.Success -> {
                 loggerService.log(riskEvent = RiskEvent.COLLECTED, requestID = fingerprintResult.requestId)
                 when (val persistResult =
-                    deviceDataService.persistFingerprintData(fingerprintResult.requestId)) {
+                    deviceDataService.persistFingerprintData(fingerprintResult.requestId, cardToken)) {
                     is NetworkResult.Success -> {
                         loggerService.log(riskEvent = RiskEvent.PUBLISHED, requestID = fingerprintResult.requestId, deviceSessionID = persistResult.data.deviceSessionId)
                          PublishDataResult.Success(persistResult.data.deviceSessionId)

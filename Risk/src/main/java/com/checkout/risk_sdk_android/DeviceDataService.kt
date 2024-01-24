@@ -40,14 +40,14 @@ internal class DeviceDataService(
      *
      * @return Result containing PersistFingerprintDataResponse on success, or an exception on failure.
      */
-    suspend fun persistFingerprintData(requestId: String): NetworkResult<PersistFingerprintDataResponse> =
+    suspend fun persistFingerprintData(requestId: String, cardToken: String?): NetworkResult<PersistFingerprintDataResponse> =
         executeApiCall {
             deviceDataApi.persistFingerprintData(
                 merchantPublicKey,
                 PersistFingerprintDataRequest(
                     fpRequestId = requestId,
                     integrationType = integrationType.type,
-                    cardToken = null,
+                    cardToken = cardToken,
                 ),
             )
         }
