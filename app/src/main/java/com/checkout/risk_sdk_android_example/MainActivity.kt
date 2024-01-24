@@ -32,7 +32,6 @@ import com.checkout.risk_sdk_android.RiskEnvironment
 import com.checkout.risk_sdk_android_example.ui.theme.RisksdkandroidTheme
 import kotlinx.coroutines.launch
 
-
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -86,6 +85,9 @@ fun MyScreen(context: Context) {
                 it?.let {
                     status = DataFetchStatus.IDLE
                     return@let it
+                } ?: run {
+                    status = DataFetchStatus.ERROR
+                    return@let null
                 }
             }
     }
