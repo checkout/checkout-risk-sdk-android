@@ -12,9 +12,7 @@ import retrofit2.http.Query
 /**
  * Service for retrieving device data configuration.
  *
- * @param deviceDataEndpoint The endpoint for retrieving device data configuration.
- * @param merchantPublicKey The merchant public key.
- * @param integrationType The integration type.
+ * @param internalConfig The RiskSDKInternalConfig type.
  * */
 internal class DeviceDataService(
     internalConfig: RiskSDKInternalConfig,
