@@ -32,7 +32,6 @@ import com.checkout.risk_sdk_android.RiskEnvironment
 import com.checkout.risk_sdk_android_example.ui.theme.RisksdkandroidTheme
 import kotlinx.coroutines.launch
 
-// import com.google.android.material.progressindicator.CircularProgressIndicator
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

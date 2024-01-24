@@ -16,10 +16,9 @@ import kotlin.coroutines.suspendCoroutine
  */
 internal class FingerprintService(
     context: Context,
-    internalConfig: RiskSDKInternalConfig,
+    private val internalConfig: RiskSDKInternalConfig,
     fingerprintPublicKey: String
 ) {
-    private val internalConfig = internalConfig
     private val client: FingerprintJS = FingerprintJSFactory(context).createInstance(
         Configuration(
             apiKey = fingerprintPublicKey,
@@ -49,7 +48,7 @@ internal class FingerprintService(
             )
         }
 
-    private fun generateMetaData(): Map<String, Any> {
+    private fun generateMetaData(): Map<String, String> {
         return mapOf("fpjsSource" to internalConfig.sourceType.rawValue, "fpjsTimestamp" to System.currentTimeMillis().toString())
     }
 }

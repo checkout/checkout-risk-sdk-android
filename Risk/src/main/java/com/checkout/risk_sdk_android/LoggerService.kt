@@ -126,9 +126,7 @@ internal class LoggerService(private val internalConfig: RiskSDKInternalConfig, 
     ): Event {
         val maskedPublicKey = getMaskedPublicKey(internalConfig.merchantPublicKey)
         val ddTags = getDDTags(internalConfig.environment.name.lowercase(Locale.ROOT))
-        var monitoringLevel: MonitoringLevel
-
-        monitoringLevel = when (riskEvent) {
+        val monitoringLevel: MonitoringLevel = when (riskEvent) {
             RiskEvent.PUBLISHED, RiskEvent.COLLECTED -> MonitoringLevel.INFO
             RiskEvent.PUBLISH_FAILURE, RiskEvent.LOAD_FAILURE -> MonitoringLevel.ERROR
             RiskEvent.PUBLISH_DISABLED -> MonitoringLevel.WARN
