@@ -39,7 +39,7 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
                         FingerprintService(
                             applicationContext,
                             internalConfig,
-                            deviceDataConfig.data.fingerprintIntegration.publicKey!!,
+                            deviceDataConfig.data.fingerprintIntegration.publicKey,
                         )
 
                     return Risk(RiskInternal(fingerprintService, deviceDataService, loggerService))
