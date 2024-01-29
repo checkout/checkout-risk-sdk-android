@@ -30,7 +30,6 @@ internal data class RiskLogError(
     val status: Int?, // status code
     val type: String?, // Error type
     val innerExceptionType: String? = null, // Inner exception type
-    val stackTrace: String? = null, // Stack trace
 )
 
 internal interface LoggerServiceProtocol {

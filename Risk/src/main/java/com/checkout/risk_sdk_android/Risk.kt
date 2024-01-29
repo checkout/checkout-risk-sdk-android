@@ -71,7 +71,6 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
                                 status = null,
                                 type = "Device Data Service Error",
                                 innerExceptionType = deviceDataConfig.e.javaClass.name,
-                                stackTrace = deviceDataConfig.e.stackTraceToString(),
                             ),
                     )
                     return null
