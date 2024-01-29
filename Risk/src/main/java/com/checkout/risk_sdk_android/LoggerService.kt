@@ -44,7 +44,10 @@ internal interface LoggerServiceProtocol {
  *
  * @param internalConfig The RiskConfig.
  */
-internal class LoggerService(private val internalConfig: RiskSDKInternalConfig, context: Context) :
+internal class LoggerService(
+    private val internalConfig: RiskSDKInternalConfig,
+    context: Context,
+) :
     LoggerServiceProtocol {
     private val logger =
         CheckoutEventLogger(PRODUCT_NAME).also {

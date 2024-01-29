@@ -12,7 +12,7 @@ import retrofit2.http.Query
 /**
  * Service for retrieving device data configuration.
  *
- * @param internalConfig The RiskSDKInternalConfig type.
+ * @param internalConfig The RiskSDKInternalConfig interface.
  * */
 internal class DeviceDataService(
     internalConfig: RiskSDKInternalConfig,
@@ -38,7 +38,10 @@ internal class DeviceDataService(
      *
      * @return Result containing PersistFingerprintDataResponse on success, or an exception on failure.
      */
-    suspend fun persistFingerprintData(requestId: String, cardToken: String?): NetworkResult<PersistFingerprintDataResponse> =
+    suspend fun persistFingerprintData(
+        requestId: String,
+        cardToken: String?,
+    ): NetworkResult<PersistFingerprintDataResponse> =
         executeApiCall {
             deviceDataApi.persistFingerprintData(
                 merchantPublicKey,

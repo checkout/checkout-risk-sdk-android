@@ -15,7 +15,7 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
                 return it
             }
 
-            val internalConfig = RiskSDKInternalConfig(config)
+            val internalConfig = RiskSDKInternalConfigImpl(config)
             val loggerService = LoggerService(internalConfig, applicationContext)
             deviceDataService = DeviceDataService(internalConfig)
 
@@ -58,6 +58,7 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
                     )
                     return null
                 }
+
                 is NetworkResult.Exception -> {
                     loggerService.log(
                         riskEvent = RiskEvent.LOAD_FAILURE,
@@ -88,10 +89,16 @@ internal class RiskInternal(
     suspend fun publishData(cardToken: String?): PublishDataResult =
         when (val fingerprintResult = fingerprintService.publishData()) {
             is FingerprintResult.Success -> {
-                loggerService.log(riskEvent = RiskEvent.COLLECTED, requestID = fingerprintResult.requestId)
+                loggerService.log(
+                    riskEvent = RiskEvent.COLLECTED,
+                    requestID = fingerprintResult.requestId,
+                )
                 when (
                     val persistResult =
-                        deviceDataService.persistFingerprintData(fingerprintResult.requestId, cardToken)
+                        deviceDataService.persistFingerprintData(
+                            fingerprintResult.requestId,
+                            cardToken,
+                        )
                 ) {
                     is NetworkResult.Success -> {
                         loggerService.log(

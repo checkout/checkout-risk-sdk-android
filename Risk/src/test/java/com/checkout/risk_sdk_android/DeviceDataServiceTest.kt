@@ -10,6 +10,16 @@ import org.junit.Before
 import org.junit.Test
 import java.io.InputStreamReader
 
+internal class RiskSDKInternalConfigTestImpl(
+    override val merchantPublicKey: String,
+    override val framesMode: Boolean,
+    override val environment: RiskEnvironment,
+    override val deviceDataEndpoint: String,
+    override val fingerprintEndpoint: String,
+    override val integrationType: RiskIntegrationType,
+    override val sourceType: SourceType,
+) : RiskSDKInternalConfig
+
 class DeviceDataServiceTest {
     private val mockWebServer: MockWebServer = MockWebServer()
 
@@ -31,13 +41,17 @@ class DeviceDataServiceTest {
                 .setBody(MockResponseFileReader("getConfiguration_response_200.json").content)
 
         mockWebServer.enqueue(response)
-        val internalConfig = RiskSDKInternalConfig(
-            RiskConfig(
-                publicKey = "pk_test_key",
+
+        val internalConfig =
+            RiskSDKInternalConfigTestImpl(
+                merchantPublicKey = "pk_test_key",
+                framesMode = false,
                 environment = RiskEnvironment.QA,
-                framesMode = false
+                deviceDataEndpoint = mockWebServer.url("/").toString(),
+                fingerprintEndpoint = mockWebServer.url("/").toString(),
+                integrationType = RiskIntegrationType.STANDALONE,
+                sourceType = SourceType.RISK_SDK,
             )
-        )
 
         val deviceDataService = DeviceDataService(internalConfig)
 
@@ -66,13 +80,17 @@ class DeviceDataServiceTest {
                 .setResponseCode(500)
 
         mockWebServer.enqueue(response)
-        val internalConfig = RiskSDKInternalConfig(
-            RiskConfig(
-                publicKey = "pk_test_key",
+
+        val internalConfig =
+            RiskSDKInternalConfigTestImpl(
+                merchantPublicKey = "pk_test_key",
+                framesMode = false,
                 environment = RiskEnvironment.QA,
-                framesMode = false
+                deviceDataEndpoint = mockWebServer.url("/").toString(),
+                fingerprintEndpoint = mockWebServer.url("/").toString(),
+                integrationType = RiskIntegrationType.STANDALONE,
+                sourceType = SourceType.RISK_SDK,
             )
-        )
 
         val deviceDataService = DeviceDataService(internalConfig)
 
@@ -94,18 +112,21 @@ class DeviceDataServiceTest {
 
         mockWebServer.enqueue(response)
 
-        val internalConfig = RiskSDKInternalConfig(
-            RiskConfig(
-                publicKey = "pk_test_key",
+        val internalConfig =
+            RiskSDKInternalConfigTestImpl(
+                merchantPublicKey = "pk_test_key",
+                framesMode = false,
                 environment = RiskEnvironment.QA,
-                framesMode = false
+                deviceDataEndpoint = mockWebServer.url("/").toString(),
+                fingerprintEndpoint = mockWebServer.url("/").toString(),
+                integrationType = RiskIntegrationType.STANDALONE,
+                sourceType = SourceType.RISK_SDK,
             )
-        )
 
         val deviceDataService = DeviceDataService(internalConfig)
 
         runTest {
-            deviceDataService.persistFingerprintData("fp_data").let {
+            deviceDataService.persistFingerprintData("fp_data", "card_token").let {
                 if (it is NetworkResult.Success) {
                     Assert.assertEquals(
                         PersistFingerprintDataResponse("1234567890"),
@@ -128,6 +149,7 @@ class DeviceDataServiceTest {
                 object {
                     val fp_request_id = "fp_data"
                     val integration_type = "RiskAndroidStandalone"
+                    val card_token = "card_token"
                 },
             )
 
@@ -145,17 +167,21 @@ class DeviceDataServiceTest {
 
         mockWebServer.enqueue(response)
 
-        val internalConfig = RiskSDKInternalConfig(
-            RiskConfig(
-                publicKey = "pk_test_key",
+        val internalConfig =
+            RiskSDKInternalConfigTestImpl(
+                merchantPublicKey = "pk_test_key",
+                framesMode = false,
                 environment = RiskEnvironment.QA,
-                framesMode = false
+                deviceDataEndpoint = mockWebServer.url("/").toString(),
+                fingerprintEndpoint = mockWebServer.url("/").toString(),
+                integrationType = RiskIntegrationType.STANDALONE,
+                sourceType = SourceType.RISK_SDK,
             )
-        )
+
         val deviceDataService = DeviceDataService(internalConfig)
 
         runTest {
-            deviceDataService.persistFingerprintData("fp_data").let {
+            deviceDataService.persistFingerprintData("fp_data", "card_token").let {
                 if (it is NetworkResult.Error) {
                     Assert.assertEquals("Server Error", it.message)
                 }
