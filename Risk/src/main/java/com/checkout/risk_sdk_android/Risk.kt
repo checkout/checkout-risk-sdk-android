@@ -21,7 +21,9 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
 
             when (val deviceDataConfig = deviceDataService.getConfiguration()) {
                 is NetworkResult.Success -> {
-                    if (!deviceDataConfig.data.fingerprintIntegration.enabled || deviceDataConfig.data.fingerprintIntegration.publicKey == null) {
+                    if (!deviceDataConfig.data.fingerprintIntegration.enabled ||
+                        deviceDataConfig.data.fingerprintIntegration.publicKey == null
+                    ) {
                         loggerService.log(
                             riskEvent = RiskEvent.PUBLISH_DISABLED,
                             error =
@@ -58,6 +60,7 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
                     )
                     return null
                 }
+
                 is NetworkResult.Exception -> {
                     loggerService.log(
                         riskEvent = RiskEvent.LOAD_FAILURE,
@@ -67,6 +70,8 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
                                 message = deviceDataConfig.e.message ?: "Unknown error",
                                 status = null,
                                 type = "Device Data Service Error",
+                                innerExceptionType = deviceDataConfig.e.javaClass.name,
+                                stackTrace = deviceDataConfig.e.stackTraceToString(),
                             ),
                     )
                     return null
@@ -88,10 +93,16 @@ internal class RiskInternal(
     suspend fun publishData(cardToken: String?): PublishDataResult =
         when (val fingerprintResult = fingerprintService.publishData()) {
             is FingerprintResult.Success -> {
-                loggerService.log(riskEvent = RiskEvent.COLLECTED, requestID = fingerprintResult.requestId)
+                loggerService.log(
+                    riskEvent = RiskEvent.COLLECTED,
+                    requestID = fingerprintResult.requestId,
+                )
                 when (
                     val persistResult =
-                        deviceDataService.persistFingerprintData(fingerprintResult.requestId, cardToken)
+                        deviceDataService.persistFingerprintData(
+                            fingerprintResult.requestId,
+                            cardToken,
+                        )
                 ) {
                     is NetworkResult.Success -> {
                         loggerService.log(
