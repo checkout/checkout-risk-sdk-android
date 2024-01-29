@@ -38,7 +38,10 @@ internal class DeviceDataService(
      *
      * @return Result containing PersistFingerprintDataResponse on success, or an exception on failure.
      */
-    suspend fun persistFingerprintData(requestId: String, cardToken: String?): NetworkResult<PersistFingerprintDataResponse> =
+    suspend fun persistFingerprintData(
+        requestId: String,
+        cardToken: String?,
+    ): NetworkResult<PersistFingerprintDataResponse> =
         executeApiCall {
             deviceDataApi.persistFingerprintData(
                 merchantPublicKey,
@@ -57,10 +60,14 @@ internal class DeviceDataService(
             if (response.isSuccessful && body != null) {
                 NetworkResult.Success(body)
             } else {
-                NetworkResult.Error(code = response.code(), message = response.message())
+                NetworkResult.Error(
+                    code = response.code(),
+                    message = response.message(),
+                    innerException = Exception(),
+                )
             }
         } catch (e: HttpException) {
-            NetworkResult.Error(code = e.code(), message = e.message())
+            NetworkResult.Error(code = e.code(), message = e.message(), innerException = e)
         } catch (e: Throwable) {
             NetworkResult.Exception(e)
         }
@@ -121,7 +128,12 @@ internal sealed class NetworkResult<out T> {
         }
     }
 
-    class Error(val code: Int, val message: String) : NetworkResult<Nothing>()
+    class Error(
+        val code: Int,
+        val message: String,
+        val innerException: Throwable? = null,
+    ) :
+        NetworkResult<Nothing>()
 
     class Exception(val e: Throwable) : NetworkResult<Nothing>()
 }

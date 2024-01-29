@@ -56,6 +56,7 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
                                 message = deviceDataConfig.message,
                                 status = null,
                                 type = "Device Data Service Error",
+                                innerExceptionType = deviceDataConfig.innerException?.javaClass?.name,
                             ),
                     )
                     return null
@@ -121,6 +122,7 @@ internal class RiskInternal(
                                     message = persistResult.message,
                                     status = null,
                                     type = "Device Data Service Error",
+                                    innerExceptionType = persistResult.innerException?.javaClass?.name,
                                 ),
                         )
                         PublishDataResult.Failure(persistResult.message)
