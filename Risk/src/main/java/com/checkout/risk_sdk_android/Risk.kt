@@ -135,6 +135,7 @@ internal class RiskInternal(
                                     message = persistResult.e.message ?: "Unknown error",
                                     status = persistResult.e.hashCode(),
                                     type = "Device Data Service Error",
+                                    innerExceptionType = persistResult.e.javaClass.name,
                                 ),
                         )
                         PublishDataResult.Exception(persistResult.e)
