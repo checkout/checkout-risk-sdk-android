@@ -12,7 +12,7 @@ import retrofit2.http.Query
 /**
  * Service for retrieving device data configuration.
  *
- * @param internalConfig The RiskSDKInternalConfig type.
+ * @param internalConfig The RiskSDKInternalConfig interface.
  * */
 internal class DeviceDataService(
     internalConfig: RiskSDKInternalConfig,

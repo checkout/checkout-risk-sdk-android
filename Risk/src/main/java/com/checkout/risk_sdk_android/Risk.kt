@@ -15,7 +15,7 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
                 return it
             }
 
-            val internalConfig = RiskSDKInternalConfig(config)
+            val internalConfig = RiskSDKInternalConfigImpl(config)
             val loggerService = LoggerService(internalConfig, applicationContext)
             deviceDataService = DeviceDataService(internalConfig)
 
