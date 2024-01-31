@@ -7,7 +7,8 @@ import com.checkout.eventlogger.domain.model.Event
 import com.checkout.eventlogger.domain.model.MonitoringLevel
 import com.checkout.eventlogger.domain.model.RemoteProcessorConfig
 import com.checkout.eventlogger.domain.model.RemoteProcessorMetadata
-import java.util.*
+import java.util.Date
+import java.util.Locale
 import com.checkout.eventlogger.BuildConfig as CKOEventLoggerBuildConfig
 import com.checkout.risk_sdk_android.BuildConfig as RiskBuildConfig
 
@@ -28,6 +29,7 @@ internal data class RiskLogError(
     val message: String, // description of error
     val status: Int?, // status code
     val type: String?, // Error type
+    val innerExceptionType: String? = null, // Inner exception type
 )
 
 internal interface LoggerServiceProtocol {
@@ -159,6 +161,7 @@ internal class LoggerService(private val internalConfig: RiskSDKInternalConfig, 
                         "ErrorMessage" to error?.message,
                         "ErrorType" to error?.type,
                         "ErrorReason" to error?.reason,
+                        "InnerExceptionType" to error?.innerExceptionType,
                     ).filterValues { it != null }.mapValues { it.value!! }
             }
 
