@@ -125,7 +125,7 @@ internal class RiskInternal(
                                     innerExceptionType = persistResult.innerException?.javaClass?.name,
                                 ),
                         )
-                        PublishDataResult.Failure(persistResult.message)
+                        PublishDataResult.PublishFailure
                     }
 
                     is NetworkResult.Exception -> {
@@ -140,7 +140,7 @@ internal class RiskInternal(
                                     innerExceptionType = persistResult.e.javaClass.name,
                                 ),
                         )
-                        PublishDataResult.Exception(persistResult.e)
+                        PublishDataResult.PublishFailure
                     }
                 }
             }
@@ -156,15 +156,15 @@ internal class RiskInternal(
                             type = "Fingerprint Service Error",
                         ),
                 )
-                PublishDataResult.Failure(fingerprintResult.description)
+                PublishDataResult.PublishFailure
             }
         }
 }
 
+public data class PublishRiskData(val deviceSessionId: String)
+
 public sealed class PublishDataResult {
     public data class Success(val deviceSessionId: String) : PublishDataResult()
 
-    public data class Failure(val message: String) : PublishDataResult()
-
-    public data class Exception(val e: Throwable) : PublishDataResult()
+    public data object PublishFailure : PublishDataResult()
 }
