@@ -84,10 +84,10 @@ fun MyScreen(context: Context) {
             ).let {
                 it?.let {
                     status = DataFetchStatus.IDLE
-                    return@let it
+                    it
                 } ?: run {
                     status = DataFetchStatus.ERROR
-                    return@let null
+                    null
                 }
             }
     }
