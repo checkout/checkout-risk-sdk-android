@@ -1,6 +1,7 @@
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
+    id("maven-publish")
 }
 
 kotlin {
@@ -41,11 +42,17 @@ android {
             )
         }
 
-         buildFeatures {
-//             viewBinding = true
-             buildConfig = true
-         }
+        buildFeatures {
+            buildConfig = true
+        }
+
+        publishing {
+            multipleVariants {
+                includeBuildTypeValues("release", "debug")
+            }
+        }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
@@ -76,4 +83,17 @@ dependencies {
 
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            register<MavenPublication>("release") {
+                from(components.getByName("release"))
+                groupId = "com.checkout.risk_sdk_android"
+                artifactId = "risk-sdk-android"
+                version = "1.0.0"
+            }
+        }
+    }
 }
