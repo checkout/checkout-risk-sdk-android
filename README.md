@@ -64,7 +64,7 @@ The package helps collect device data for merchants with direct integration (sta
 
 ### Public API
 The package exposes two methods:
-1. `getInstance` - This is a method that returns a singleton instance of Risk. When the method is called, preliminary checks are made to Checkout's internal API(s) that retrieves the public keys used to initialise the package used in collecting device data, if the checks fail or the merchant is disabled, nil will be returned, else, if the checks are successful, the `Risk` instance is returned to the consumer of the package which can now be used to publish the data with the `publishData` method.
+1. `getInstance` - This method returns a singleton instance of Risk. When the method is called, preliminary checks are made to Checkout's internal API(s) that retrieve the public keys used to initialise the package for collecting device data. If the checks fail or the merchant is disabled, `null` will be returned, else, if the checks are successful, the `Risk` instance is returned to the consumer of the package which can now be used to publish the data with the `publishData` method.
 
     <details>
     <summary>Arguments</summary>
@@ -113,7 +113,7 @@ The package exposes two methods:
     <summary>Arguments</summary>
 
     ```kotlin
-    suspend fun publishData(cardToken: string? = null): PublishRiskData? {
+    suspend fun publishData(cardToken: string?): PublishDataResult {
     ...
     }
     ```
@@ -123,8 +123,10 @@ The package exposes two methods:
     <summary>Responses</summary>
 
     ```kotlin
-    data class PublishRiskData(val deviceSessionID: String)
-    data class RiskError(val description: String)
+    public sealed class PublishDataResult {
+      public data class Success(val deviceSessionId: String) : PublishDataResult()
+      public data object PublishFailure : PublishDataResult()
+    }
     ```
     </details>
 
