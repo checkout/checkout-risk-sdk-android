@@ -62,9 +62,9 @@ The package helps collect device data for merchants with direct integration (sta
                     ),
                 ).let {
                     it?.let {
-                        return@let it
+                        it
                     } ?: run {
-                        return@let null
+                        null
                     }
                 }
 
