@@ -128,7 +128,7 @@ The package exposes two methods:
     <summary>Arguments</summary>
 
     ```kotlin
-    public suspend fun publishData(cardToken: string? = null): PublishDataResult? {
+    public suspend fun publishData(cardToken: string? = null): PublishDataResult {
     ...
     }
     ```
@@ -138,13 +138,13 @@ The package exposes two methods:
     <summary>Responses</summary>
 
     ```kotlin
-    public sealed class PublishDataResult {
-        public data class Success(val deviceSessionId: String) : PublishDataResult()
+        public data class PublishRiskData(val deviceSessionId: String)
 
-        public data class Failure(val message: String) : PublishDataResult()
+        public sealed class PublishDataResult {
+            public data class Success(val deviceSessionId: String) : PublishDataResult()
 
-        public data class Exception(val e: Throwable) : PublishDataResult()
-    }
+            public data object PublishFailure : PublishDataResult()
+        }
     ```
     </details>
 
