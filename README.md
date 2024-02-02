@@ -1,5 +1,5 @@
 #  Risk Android package
-[![](https://jitpack.io/v/checkout/risk-sdk-android.svg)](https://jitpack.io/#checkout/risk-sdk-android)
+[![](https://jitpack.io/v/checkout/checkout-risk-sdk-android.svg)](https://jitpack.io/#checkout/checkout-risk-sdk-android)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 The package helps collect device data for merchants with direct integration (standalone) with the package and those using [Checkout's Frames Android package](https://github.com/checkout/frames-android).
@@ -46,19 +46,35 @@ The package helps collect device data for merchants with direct integration (sta
         > Please keep in mind that the Jitpack repository should to be added to the project gradle file while the dependency should be added in the module gradle file. (More about build configuration files is available [here](https://developer.android.com/studio/build)).
 
   3. Obtain a public API key from [Checkout Dashboard](https://dashboard.checkout.com/developers/keys).
-  4. Initialise the package with the `getInstance` method passing in the required configuration (public API key and environment), then publish the device data with the `publishData` method, see example below.
+  4. Initialise the package with the `getInstance` method passing in the required configuration (public API key and environment) early-on.
         ```kotlin
         // Example usage of package
         val yourConfig = RiskConfig(publicKey = "pk_qa_xxx", environment = RiskEnvironment.QA)
-
-        try {
-            val riskInstance = Risk.getInstance(yourConfig)
-            riskInstance?.let {
-            val response = it.publishData()
-            println(response)
+        // Initialise the package with the getInstance method early-on
+        val riskInstance =
+            Risk.getInstance(
+                context,
+                RiskConfig(
+                    BuildConfig.SAMPLE_MERCHANT_PUBLIC_KEY,
+                    RiskEnvironment.QA,
+                    false,
+                ),
+            ).let {
+                it?.let {
+                    it
+                } ?: run {
+                    null
+                }
             }
-        } catch (e: Exception) {
-            println("Error: ${e.message}")
+
+        ```
+   5. When the shopper selects Pay, publish the device data with the `publishData` method on the Risk instance and retrieve the `deviceSessionId`.
+        ```kotlin
+        // Publish the device data with the publishData method
+        riskInstance?.publishData().let {
+            if (it is PublishDataResult.Success) {
+                println("Device session ID: ${it.deviceSessionId}") // dsid_XXXX
+            }
         }
         ```
 
@@ -73,11 +89,10 @@ The package exposes two methods:
     data class RiskConfig(val publicKey: String, val environment: RiskEnvironment, val framesMode: Boolean = false)
 
     // Instance creation of Risk Android package
-    class Risk private constructor(fingerprintService: FingerprintService, deviceDataService: DeviceDataService) {
-        companion object {
-            private var sharedInstance: Risk? = null
-
-            suspend fun getInstance(config: RiskConfig): Risk? {
+    public class Risk private constructor(...) {
+        public companion object {
+            ...
+            public suspend fun getInstance(applicaitonContext: Context, config: RiskConfig): Risk? {
                 ...
             }
         }
@@ -113,7 +128,7 @@ The package exposes two methods:
     <summary>Arguments</summary>
 
     ```kotlin
-    suspend fun publishData(cardToken: string?): PublishDataResult {
+    public suspend fun publishData(cardToken: string? = null): PublishDataResult {
     ...
     }
     ```
@@ -123,15 +138,16 @@ The package exposes two methods:
     <summary>Responses</summary>
 
     ```kotlin
-    public sealed class PublishDataResult {
-      public data class Success(val deviceSessionId: String) : PublishDataResult()
-      public data object PublishFailure : PublishDataResult()
-    }
+        public sealed class PublishDataResult {
+            public data class Success(val deviceSessionId: String) : PublishDataResult()
+
+            public data object PublishFailure : PublishDataResult()
+        }
     ```
     </details>
 
 ### Additional Resources
-<!-- TODO: Add website documentation link here (https://checkout.atlassian.net/browse/PRISM-10088) - [Risk Android SDK documentation](https://docs.checkout.com/risk/overview) -->
+<!-- TODO: Add website documentation link here - [Risk Android SDK documentation](https://docs.checkout.com/risk/overview) -->
 - [Frames Android SDK documentation](https://www.checkout.com/docs/developer-resources/sdks/frames-android-sdk)
 
 ## Demo projects

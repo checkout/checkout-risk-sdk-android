@@ -3,7 +3,7 @@ package com.checkout.risk_sdk_android
 public data class RiskConfig(
     val publicKey: String,
     val environment: RiskEnvironment,
-    val framesMode: Boolean,
+    val framesMode: Boolean = false,
 )
 
 internal interface RiskSDKInternalConfig {
