@@ -161,8 +161,6 @@ internal class RiskInternal(
         }
 }
 
-public data class PublishRiskData(val deviceSessionId: String)
-
 public sealed class PublishDataResult {
     public data class Success(val deviceSessionId: String) : PublishDataResult()
 

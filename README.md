@@ -138,8 +138,6 @@ The package exposes two methods:
     <summary>Responses</summary>
 
     ```kotlin
-        public data class PublishRiskData(val deviceSessionId: String)
-
         public sealed class PublishDataResult {
             public data class Success(val deviceSessionId: String) : PublishDataResult()
 
