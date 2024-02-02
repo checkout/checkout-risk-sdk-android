@@ -46,35 +46,35 @@ The package helps collect device data for merchants with direct integration (sta
         > Please keep in mind that the Jitpack repository should to be added to the project gradle file while the dependency should be added in the module gradle file. (More about build configuration files is available [here](https://developer.android.com/studio/build)).
 
   3. Obtain a public API key from [Checkout Dashboard](https://dashboard.checkout.com/developers/keys).
-  4. Initialise the package with the `getInstance` method passing in the required configuration (public API key and environment), then publish the device data with the `publishData` method, see example below.
+  4. Initialise the package with the `getInstance` method passing in the required configuration (public API key and environment) early-on.
         ```kotlin
         // Example usage of package
         val yourConfig = RiskConfig(publicKey = "pk_qa_xxx", environment = RiskEnvironment.QA)
-
-        try {
-            val riskInstance =
-                Risk.getInstance(
-                    context,
-                    RiskConfig(
-                        BuildConfig.SAMPLE_MERCHANT_PUBLIC_KEY,
-                        RiskEnvironment.QA,
-                        false,
-                    ),
-                ).let {
-                    it?.let {
-                        it
-                    } ?: run {
-                        null
-                    }
+        // Initialise the package with the getInstance method early-on
+        val riskInstance =
+            Risk.getInstance(
+                context,
+                RiskConfig(
+                    BuildConfig.SAMPLE_MERCHANT_PUBLIC_KEY,
+                    RiskEnvironment.QA,
+                    false,
+                ),
+            ).let {
+                it?.let {
+                    it
+                } ?: run {
+                    null
                 }
+            }
 
-          riskInstance?.publishData().let {
-              if (it is PublishDataResult.Success) {
-                  println("Device session ID: ${it.deviceSessionId}")
-              }
-          }
-        } catch (e: Exception) {
-            println("Error: ${e.message}")
+        ```
+   5. When the shopper selects Pay, publish the device data with the `publishData` method on the Risk instance and retrieve the `deviceSessionId`.
+        ```kotlin
+        // Publish the device data with the publishData method
+        riskInstance?.publishData().let {
+            if (it is PublishDataResult.Success) {
+                println("Device session ID: ${it.deviceSessionId}") // dsid_XXXX
+            }
         }
         ```
 
