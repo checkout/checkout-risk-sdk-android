@@ -1,4 +1,4 @@
-package com.checkout.risk_sdk_android
+package com.checkout.risk
 
 import com.google.gson.annotations.SerializedName
 import retrofit2.HttpException

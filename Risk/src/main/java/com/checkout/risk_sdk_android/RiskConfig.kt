@@ -1,4 +1,4 @@
-package com.checkout.risk_sdk_android
+package com.checkout.risk
 
 public data class RiskConfig(
     val publicKey: String,

@@ -9,7 +9,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.checkout.risk_sdk_android"
+    namespace = "com.checkout.risk"
     compileSdk = 34
 
     defaultConfig {
@@ -90,9 +90,9 @@ afterEvaluate {
         publications {
             register<MavenPublication>("release") {
                 from(components.getByName("release"))
-                groupId = "com.checkout.risk_sdk_android"
-                artifactId = "risk-sdk-android"
-                version = "1.0.0"
+                groupId = "com.github.checkout"
+                artifactId = "checkout-risk-sdk-android"
+                version = "1.0.1"
             }
         }
     }

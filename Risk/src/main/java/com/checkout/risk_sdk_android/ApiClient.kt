@@ -1,4 +1,4 @@
-package com.checkout.risk_sdk_android
+package com.checkout.risk
 
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
