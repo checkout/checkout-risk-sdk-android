@@ -12,7 +12,7 @@ import java.util.Locale
 import com.checkout.eventlogger.BuildConfig as CKOEventLoggerBuildConfig
 import com.checkout.risk_sdk_android.BuildConfig as RiskBuildConfig
 
-private const val PRODUCT_NAME = Constants.productName
+private const val PRODUCT_NAME = Constants.PRODUCT_NAME
 private const val PRODUCT_IDENTIFIER = RiskBuildConfig.LIBRARY_PACKAGE_NAME
 private const val PRODUCT_VERSION = CKOEventLoggerBuildConfig.PRODUCT_VERSION
 
@@ -171,7 +171,7 @@ internal class LoggerService(
         return LoggingEvent(
             monitoringLevel = monitoringLevel,
             properties = properties,
-            typeIdentifier = Constants.loggerTypeIdentifier,
+            typeIdentifier = Constants.LOGGER_TYPE_IDENTIFIER,
         )
     }
 
@@ -180,6 +180,6 @@ internal class LoggerService(
     }
 
     private fun getDDTags(environment: String): String {
-        return "team:prism,service:prism.risk.android,version:${Constants.riskPackageVersion},env:$environment"
+        return "team:prism,service:prism.risk.android,version:${Constants.RISK_PACKAGE_VERSION},env:$environment"
     }
 }

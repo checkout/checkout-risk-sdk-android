@@ -1,7 +1,7 @@
 package com.checkout.risk_sdk_android
 
-internal object Constants {  
-    const val productName = "risk-android-sdk"  
-    const val riskPackageVersion = "0.0.1"  
-    const val loggerTypeIdentifier = "com.checkout.risk-mobile-sdk"  
-}  
+internal object Constants {
+    const val PRODUCT_NAME = "risk-android-sdk"
+    const val RISK_PACKAGE_VERSION = "1.0.1"
+    const val LOGGER_TYPE_IDENTIFIER = "com.checkout.risk-mobile-sdk"
+}
