@@ -9,7 +9,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.checkout.risk_sdk_android"
+    namespace = "com.checkout.risk"
     compileSdk = 34
 
     defaultConfig {

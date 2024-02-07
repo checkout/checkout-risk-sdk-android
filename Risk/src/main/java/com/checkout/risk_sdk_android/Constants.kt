@@ -1,4 +1,4 @@
-package com.checkout.risk_sdk_android
+package com.checkout.risk
 
 internal object Constants {
     const val PRODUCT_NAME = "risk-android-sdk"

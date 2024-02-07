@@ -1,4 +1,4 @@
-package com.checkout.risk_sdk_android
+package com.checkout.risk
 
 import com.google.gson.Gson
 import kotlinx.coroutines.test.runTest

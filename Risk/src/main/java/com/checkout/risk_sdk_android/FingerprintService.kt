@@ -1,4 +1,4 @@
-package com.checkout.risk_sdk_android
+package com.checkout.risk
 
 import android.content.Context
 import com.fingerprintjs.android.fpjs_pro.Configuration

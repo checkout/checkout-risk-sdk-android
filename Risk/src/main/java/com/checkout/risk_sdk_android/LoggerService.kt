@@ -1,4 +1,4 @@
-package com.checkout.risk_sdk_android
+package com.checkout.risk
 
 import android.content.Context
 import com.checkout.eventlogger.CheckoutEventLogger
@@ -10,7 +10,7 @@ import com.checkout.eventlogger.domain.model.RemoteProcessorMetadata
 import java.util.Date
 import java.util.Locale
 import com.checkout.eventlogger.BuildConfig as CKOEventLoggerBuildConfig
-import com.checkout.risk_sdk_android.BuildConfig as RiskBuildConfig
+import com.checkout.risk.BuildConfig as RiskBuildConfig
 
 private const val PRODUCT_NAME = Constants.PRODUCT_NAME
 private const val PRODUCT_IDENTIFIER = RiskBuildConfig.LIBRARY_PACKAGE_NAME

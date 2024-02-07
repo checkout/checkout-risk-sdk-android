@@ -1,4 +1,4 @@
-package com.checkout.risk_sdk_android
+package com.checkout.risk
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
