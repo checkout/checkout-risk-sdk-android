@@ -21,7 +21,7 @@ android {
         buildConfigField(
             "String",
             "SAMPLE_MERCHANT_PUBLIC_KEY",
-            "\"${System.getenv()["SAMPLE_MERCHANT_PUBLIC_KEY"]}\""
+            "\"${System.getenv()["SAMPLE_MERCHANT_PUBLIC_KEY"]}\"",
         )
     }
 
@@ -30,7 +30,7 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }
@@ -46,7 +46,7 @@ android {
         buildConfig = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.2"
+        kotlinCompilerExtensionVersion = "1.5.3"
     }
     packaging {
         resources {
@@ -56,7 +56,6 @@ android {
 }
 
 dependencies {
-
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.10.0")
