@@ -9,6 +9,7 @@ import com.checkout.eventlogger.domain.model.RemoteProcessorConfig
 import com.checkout.eventlogger.domain.model.RemoteProcessorMetadata
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 import com.checkout.eventlogger.BuildConfig as CKOEventLoggerBuildConfig
 import com.checkout.risk.BuildConfig as RiskBuildConfig
 
@@ -136,6 +137,7 @@ internal class LoggerService(
         requestID: String?,
         error: RiskLogError?,
     ): Event {
+        val timeZoneLog = TimeZone.getDefault().id
         val maskedPublicKey = getMaskedPublicKey(internalConfig.merchantPublicKey)
         val ddTags = getDDTags(internalConfig.environment.name.lowercase(Locale.ROOT))
         val monitoringLevel: MonitoringLevel =
@@ -153,14 +155,20 @@ internal class LoggerService(
                         "FramesMode" to internalConfig.framesMode,
                         "MaskedPublicKey" to maskedPublicKey,
                         "ddTags" to ddTags,
-                        "DeviceSessionId" to deviceSessionID,
+                        "RiskSDKVersion" to Constants.RISK_PACKAGE_VERSION,
+                        "Timezone" to timeZoneLog,
                         "RequestId" to requestID,
+                        "DeviceSessionId" to deviceSessionID,
                     ).filterValues { it != null }.mapValues { it.value!! }
 
                 RiskEvent.PUBLISH_FAILURE, RiskEvent.LOAD_FAILURE, RiskEvent.PUBLISH_DISABLED ->
                     mapOf(
                         "EventType" to riskEvent.rawValue,
                         "FramesMode" to internalConfig.framesMode,
+                        "MaskedPublicKey" to maskedPublicKey,
+                        "ddTags" to ddTags,
+                        "RiskSDKVersion" to Constants.RISK_PACKAGE_VERSION,
+                        "Timezone" to timeZoneLog,
                         "ErrorMessage" to error?.message,
                         "ErrorType" to error?.type,
                         "ErrorReason" to error?.reason,
