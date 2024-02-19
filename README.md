@@ -30,6 +30,7 @@ The package helps collect device data for merchants with direct integration (sta
         allprojects {
             repositories {
                 maven { url 'https://jitpack.io' }
+                maven { url = uri("https://maven.fpregistry.io/releases") }
             }
         }
         ```
