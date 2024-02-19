@@ -28,7 +28,11 @@ internal class DeviceDataService(
      */
     suspend fun getConfiguration(): NetworkResult<DeviceDataConfiguration> =
         executeApiCall {
-            deviceDataApi.getConfiguration(merchantPublicKey, integrationType.type)
+            deviceDataApi.getConfiguration(
+                merchantPublicKey,
+                riskSdkVersion = Constants.RISK_PACKAGE_VERSION,
+                integrationType = integrationType.type,
+            )
         }
 
     /**
@@ -45,6 +49,7 @@ internal class DeviceDataService(
         executeApiCall {
             deviceDataApi.persistFingerprintData(
                 merchantPublicKey,
+                riskSdkVersion = Constants.RISK_PACKAGE_VERSION,
                 PersistFingerprintDataRequest(
                     fpRequestId = requestId,
                     integrationType = integrationType.type,
@@ -86,11 +91,13 @@ private sealed interface DeviceDataApi {
     suspend fun getConfiguration(
         @Header("Authorization") authHeader: String,
         @Query("integrationType") integrationType: String,
+        @Query("riskSdkVersion") riskSdkVersion: String,
     ): Response<DeviceDataConfiguration>
 
     @PUT("/collect/fingerprint")
     suspend fun persistFingerprintData(
         @Header("Authorization") authHeader: String,
+        @Query("riskSdkVersion") riskSdkVersion: String,
         @Body fingerprintData: PersistFingerprintDataRequest,
     ): Response<PersistFingerprintDataResponse>
 }

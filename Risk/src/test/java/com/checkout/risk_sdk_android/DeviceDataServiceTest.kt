@@ -68,7 +68,7 @@ class DeviceDataServiceTest {
 
         Assert.assertEquals("GET", request.method)
         Assert.assertEquals(
-            "/collect/configuration?integrationType=RiskAndroidStandalone",
+            "/collect/configuration?integrationType=RiskAndroidStandalone&riskSdkVersion=1.0.3",
             request.path,
         )
     }
@@ -140,7 +140,7 @@ class DeviceDataServiceTest {
 
         Assert.assertEquals("PUT", request.method)
         Assert.assertEquals(
-            "/collect/fingerprint",
+            "/collect/fingerprint?riskSdkVersion=1.0.3",
             request.path,
         )
 
