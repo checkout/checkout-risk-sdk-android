@@ -38,7 +38,7 @@ The package helps collect device data for merchants with direct integration (sta
         ```
         // module gradle file
         dependencies {
-            implementation 'com.github.checkout:risk-sdk-android:<latest_version>'
+            implementation 'com.github.checkout:checkout-risk-sdk-android:<latest_version>'
         }
         ```
 
