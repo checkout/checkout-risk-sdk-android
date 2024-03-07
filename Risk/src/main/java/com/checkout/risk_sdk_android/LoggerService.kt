@@ -1,21 +1,20 @@
 package com.checkout.risk
 
 import android.content.Context
+import com.checkout.eventlogger.BuildConfig
 import com.checkout.eventlogger.CheckoutEventLogger
 import com.checkout.eventlogger.Environment
 import com.checkout.eventlogger.domain.model.Event
 import com.checkout.eventlogger.domain.model.MonitoringLevel
-import com.checkout.eventlogger.domain.model.RemoteProcessorConfig
 import com.checkout.eventlogger.domain.model.RemoteProcessorMetadata
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
-import com.checkout.eventlogger.BuildConfig as CKOEventLoggerBuildConfig
 import com.checkout.risk.BuildConfig as RiskBuildConfig
 
 private const val PRODUCT_NAME = Constants.PRODUCT_NAME
 private const val PRODUCT_IDENTIFIER = RiskBuildConfig.LIBRARY_PACKAGE_NAME
-private const val PRODUCT_VERSION = CKOEventLoggerBuildConfig.PRODUCT_VERSION
+private const val CKO_LOGGER_PRODUCT_VERSION = BuildConfig.VERSION_NAME
 
 internal enum class RiskEvent(val rawValue: String) {
     PUBLISH_DISABLED("riskDataPublishDisabled"),
@@ -26,11 +25,16 @@ internal enum class RiskEvent(val rawValue: String) {
 }
 
 internal data class RiskLogError(
-    val reason: String, // service method
-    val message: String, // description of error
-    val status: Int?, // status code
-    val type: String?, // Error type
-    val innerExceptionType: String? = null, // Inner exception type
+    val reason: String,
+    // service method
+    val message: String,
+    // description of error
+    val status: Int?,
+    // status code
+    val type: String?,
+    // Error type
+    val innerExceptionType: String? = null,
+    // Inner exception type
 )
 
 internal interface LoggerServiceProtocol {
@@ -68,45 +72,43 @@ internal class LoggerService(
                 RiskEnvironment.PRODUCTION -> Environment.PRODUCTION
             }
 
-        initialise(context = context, environment = logEnvironment)
+        initialise(context = context, environment = logEnvironment, identifier = PRODUCT_IDENTIFIER, version = CKO_LOGGER_PRODUCT_VERSION)
     }
 
     private fun initialise(
         context: Context,
         environment: Environment,
+        identifier: String,
+        version: String,
     ) {
-        environment.toLoggingEnvironment()?.let { loggingEnvironment ->
-            val remoteProcessorMetadata =
-                RemoteProcessorMetadata.from(
-                    context,
-                    environment.toEnvironmentName().toString(),
-                    PRODUCT_IDENTIFIER,
-                    PRODUCT_VERSION,
-                )
-            val remoteProcessorConfig =
-                RemoteProcessorConfig(
-                    loggingEnvironment,
-                    sendStackTraceData = false,
-                )
-            logger.enableRemoteProcessor(
-                remoteProcessorConfig,
-                remoteProcessorMetadata,
-            )
-        }
+        logger.enableRemoteProcessor(
+            environment.toLoggingEnvironment(),
+            provideProcessorMetadata(context, environment, identifier, version),
+        )
     }
 
-    private fun Environment.toEnvironmentName() =
+    private fun provideProcessorMetadata(
+        context: Context,
+        environment: Environment,
+        identifier: String,
+        version: String,
+    ) = RemoteProcessorMetadata.from(
+        context,
+        environment.toLoggingName(),
+        identifier,
+        version,
+    )
+
+    internal fun Environment.toLoggingEnvironment() =
         when (this) {
-            is Environment.SANDBOX -> "sandbox"
-            is Environment.PRODUCTION -> "production"
-            else -> null
+            Environment.PRODUCTION -> com.checkout.eventlogger.Environment.PRODUCTION
+            Environment.SANDBOX -> com.checkout.eventlogger.Environment.SANDBOX
         }
 
-    private fun Environment.toLoggingEnvironment() =
+    internal fun Environment.toLoggingName() =
         when (this) {
-            is Environment.SANDBOX -> Environment.SANDBOX
-            is Environment.PRODUCTION -> Environment.PRODUCTION
-            else -> null
+            Environment.PRODUCTION -> "production"
+            Environment.SANDBOX -> "sandbox"
         }
 
     override fun log(
@@ -125,11 +127,7 @@ internal class LoggerService(
         override val properties: Map<String, Any> = emptyMap(),
         override val time: Date = Date(),
         override val typeIdentifier: String,
-    ) : Event {
-        override fun asSummary(): String {
-            return properties.toString()
-        }
-    }
+    ) : Event
 
     private fun formatEvent(
         riskEvent: RiskEvent,
