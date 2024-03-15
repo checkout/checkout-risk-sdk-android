@@ -68,7 +68,7 @@ class DeviceDataServiceTest {
 
         Assert.assertEquals("GET", request.method)
         Assert.assertEquals(
-            "/collect/configuration?integrationType=RiskAndroidStandalone&riskSdkVersion=1.0.4&timezone=Europe/London",
+            "/collect/configuration?integrationType=RiskAndroidStandalone&riskSdkVersion=1.0.4&timezone=Europe%2FLondon",
             request.path,
         )
     }
