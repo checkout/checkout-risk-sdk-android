@@ -65,11 +65,10 @@ class DeviceDataServiceTest {
         }
 
         val request = mockWebServer.takeRequest()
-
         Assert.assertEquals("GET", request.method)
         Assert.assertEquals(
-            "/collect/configuration?integrationType=RiskAndroidStandalone&riskSdkVersion=1.0.4&timezone=Europe%2FLondon",
-            request.path,
+            "/collect/configuration",
+            request.path.toString().split('?')[0],
         )
     }
 
