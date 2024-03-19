@@ -8,6 +8,7 @@ import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.PUT
 import retrofit2.http.Query
+import java.util.TimeZone
 
 /**
  * Service for retrieving device data configuration.
@@ -31,6 +32,7 @@ internal class DeviceDataService(
             deviceDataApi.getConfiguration(
                 merchantPublicKey,
                 riskSdkVersion = Constants.RISK_PACKAGE_VERSION,
+                timezone = TimeZone.getDefault().id,
                 integrationType = integrationType.type,
             )
         }
@@ -92,6 +94,7 @@ private sealed interface DeviceDataApi {
         @Header("Authorization") authHeader: String,
         @Query("integrationType") integrationType: String,
         @Query("riskSdkVersion") riskSdkVersion: String,
+        @Query("timezone") timezone: String,
     ): Response<DeviceDataConfiguration>
 
     @PUT("/collect/fingerprint")
