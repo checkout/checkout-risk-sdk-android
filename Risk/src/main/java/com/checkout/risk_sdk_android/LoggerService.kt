@@ -40,6 +40,10 @@ internal data class RiskLogError(
 internal interface LoggerServiceProtocol {
     fun log(
         riskEvent: RiskEvent,
+        blockTime: Double? = null,
+        deviceDataPersistTime: Double? = null,
+        fpLoadTime: Double? = null,
+        fpPublishTime: Double? = null,
         deviceSessionID: String? = null,
         requestID: String? = null,
         error: RiskLogError? = null,
@@ -72,7 +76,12 @@ internal class LoggerService(
                 RiskEnvironment.PRODUCTION -> Environment.PRODUCTION
             }
 
-        initialise(context = context, environment = logEnvironment, identifier = PRODUCT_IDENTIFIER, version = CKO_LOGGER_PRODUCT_VERSION)
+        initialise(
+            context = context,
+            environment = logEnvironment,
+            identifier = PRODUCT_IDENTIFIER,
+            version = CKO_LOGGER_PRODUCT_VERSION
+        )
     }
 
     private fun initialise(
@@ -113,11 +122,30 @@ internal class LoggerService(
 
     override fun log(
         riskEvent: RiskEvent,
+        blockTime: Double?,
+        deviceDataPersistTime: Double?,
+        fpLoadTime: Double?,
+        fpPublishTime: Double?,
         deviceSessionID: String?,
         requestID: String?,
         error: RiskLogError?,
     ) {
-        val event = formatEvent(riskEvent, deviceSessionID, requestID, error)
+        var totalLatency = 0.00
+        arrayOf(blockTime, deviceDataPersistTime, fpLoadTime, fpPublishTime).forEach { item ->
+            totalLatency += item ?: 0.00
+        }
+
+        val event = formatEvent(
+            riskEvent,
+            blockTime,
+            deviceDataPersistTime,
+            fpLoadTime,
+            fpPublishTime,
+            totalLatency,
+            deviceSessionID,
+            requestID,
+            error
+        )
 
         logger.logEvent(event)
     }
@@ -131,6 +159,11 @@ internal class LoggerService(
 
     private fun formatEvent(
         riskEvent: RiskEvent,
+        blockTime: Double?,
+        deviceDataPersistTime: Double?,
+        fpLoadTime: Double?,
+        fpPublishTime: Double?,
+        totalLatency: Double,
         deviceSessionID: String?,
         requestID: String?,
         error: RiskLogError?,
@@ -149,18 +182,28 @@ internal class LoggerService(
             when (riskEvent) {
                 RiskEvent.PUBLISHED, RiskEvent.COLLECTED ->
                     mapOf(
+                        "Block" to blockTime,
+                        "DeviceDataPersist" to deviceDataPersistTime,
+                        "FpLoad" to fpLoadTime,
+                        "FpPublish" to fpPublishTime,
+                        "Total" to totalLatency,
                         "EventType" to riskEvent.rawValue,
                         "FramesMode" to internalConfig.framesMode,
                         "MaskedPublicKey" to maskedPublicKey,
                         "ddTags" to ddTags,
                         "RiskSDKVersion" to Constants.RISK_PACKAGE_VERSION,
                         "Timezone" to timeZoneLog,
-                        "RequestId" to requestID,
+                        "FpRequestId" to requestID,
                         "DeviceSessionId" to deviceSessionID,
                     ).filterValues { it != null }.mapValues { it.value!! }
 
                 RiskEvent.PUBLISH_FAILURE, RiskEvent.LOAD_FAILURE, RiskEvent.PUBLISH_DISABLED ->
                     mapOf(
+                        "Block" to blockTime,
+                        "DeviceDataPersist" to deviceDataPersistTime,
+                        "FpLoad" to fpLoadTime,
+                        "FpPublish" to fpPublishTime,
+                        "Total" to totalLatency,
                         "EventType" to riskEvent.rawValue,
                         "FramesMode" to internalConfig.framesMode,
                         "MaskedPublicKey" to maskedPublicKey,

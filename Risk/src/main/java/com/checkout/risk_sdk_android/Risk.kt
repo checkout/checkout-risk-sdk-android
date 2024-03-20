@@ -18,14 +18,19 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
             val internalConfig = RiskSDKInternalConfigImpl(config)
             val loggerService = LoggerService(internalConfig, applicationContext)
             deviceDataService = DeviceDataService(internalConfig)
+            val startBlockTime = System.nanoTime()
 
             when (val deviceDataConfig = deviceDataService.getConfiguration()) {
                 is NetworkResult.Success -> {
+                    val endBlockTime = System.nanoTime()
+                    val blockTime = (endBlockTime - startBlockTime) / 1_000_000.0
+
                     if (!deviceDataConfig.data.fingerprintIntegration.enabled ||
                         deviceDataConfig.data.fingerprintIntegration.publicKey == null
                     ) {
                         loggerService.log(
                             riskEvent = RiskEvent.PUBLISH_DISABLED,
+                            blockTime = blockTime,
                             error =
                                 RiskLogError(
                                     reason = "getConfiguration",
@@ -37,6 +42,8 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
                         return null
                     }
 
+                    val startFpLoadTime = System.nanoTime()
+
                     val fingerprintService =
                         FingerprintService(
                             applicationContext,
@@ -44,7 +51,10 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
                             deviceDataConfig.data.fingerprintIntegration.publicKey,
                         )
 
-                    return Risk(RiskInternal(fingerprintService, deviceDataService, loggerService))
+                    val endFpLoadTime = System.nanoTime()
+                    val fpLoadTime = (endFpLoadTime - startFpLoadTime) / 1_000_000.0
+
+                    return Risk(RiskInternal(fingerprintService, deviceDataService, loggerService, blockTime, fpLoadTime))
                 }
 
                 is NetworkResult.Error -> {
@@ -76,6 +86,21 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
                     )
                     return null
                 }
+
+                else -> {
+                    loggerService.log(
+                        riskEvent = RiskEvent.LOAD_FAILURE,
+                        error =
+                        RiskLogError(
+                            reason = "getConfiguration",
+                            message = "Unknown error",
+                            status = null,
+                            type = "Device Data Service Error",
+                            innerExceptionType = "Unknown error",
+                        ),
+                    )
+                    return null
+                }
             }
         }
     }
@@ -89,14 +114,25 @@ internal class RiskInternal(
     private val fingerprintService: FingerprintService,
     private val deviceDataService: DeviceDataService,
     private val loggerService: LoggerServiceProtocol,
+    private val blockTime: Double,
+    private val fpLoadTime: Double
 ) {
-    suspend fun publishData(cardToken: String?): PublishDataResult =
+    suspend fun publishData(cardToken: String?): PublishDataResult {
+        val startFpPublishTime = System.nanoTime()
         when (val fingerprintResult = fingerprintService.publishData()) {
             is FingerprintResult.Success -> {
+
+                val endFpPublishTime = System.nanoTime()
+                val fpPublishTime = (endFpPublishTime - startFpPublishTime) / 1_000_000.0
                 loggerService.log(
+                    blockTime = blockTime,
+                    fpLoadTime = fpLoadTime,
+                    fpPublishTime = fpPublishTime,
                     riskEvent = RiskEvent.COLLECTED,
                     requestID = fingerprintResult.requestId,
                 )
+
+                val startDeviceDataPersistTime = System.nanoTime()
                 when (
                     val persistResult =
                         deviceDataService.persistFingerprintData(
@@ -105,60 +141,110 @@ internal class RiskInternal(
                         )
                 ) {
                     is NetworkResult.Success -> {
+                        val endDeviceDataPersistTime = System.nanoTime()
+                        val deviceDataPersistTime =
+                            (endDeviceDataPersistTime - startDeviceDataPersistTime) / 1_000_000.0
                         loggerService.log(
+                            blockTime = blockTime,
+                            fpLoadTime = fpLoadTime,
+                            fpPublishTime = fpPublishTime,
+                            deviceDataPersistTime = deviceDataPersistTime,
                             riskEvent = RiskEvent.PUBLISHED,
                             requestID = fingerprintResult.requestId,
                             deviceSessionID = persistResult.data.deviceSessionId,
                         )
-                        PublishDataResult.Success(persistResult.data.deviceSessionId)
+                        return PublishDataResult.Success(persistResult.data.deviceSessionId)
                     }
 
                     is NetworkResult.Error -> {
                         loggerService.log(
+                            blockTime = blockTime,
+                            fpLoadTime = fpLoadTime,
+                            fpPublishTime = fpPublishTime,
                             riskEvent = RiskEvent.PUBLISH_FAILURE,
                             error =
-                                RiskLogError(
-                                    reason = "persistFingerprintData",
-                                    message = persistResult.message,
-                                    status = null,
-                                    type = "Device Data Service Error",
-                                    innerExceptionType = persistResult.innerException?.javaClass?.name,
-                                ),
+                            RiskLogError(
+                                reason = "persistFingerprintData",
+                                message = persistResult.message,
+                                status = null,
+                                type = "Device Data Service Error",
+                                innerExceptionType = persistResult.innerException?.javaClass?.name,
+                            ),
                         )
-                        PublishDataResult.PublishFailure
+                        return PublishDataResult.PublishFailure
                     }
 
                     is NetworkResult.Exception -> {
                         loggerService.log(
+                            blockTime = blockTime,
+                            fpLoadTime = fpLoadTime,
+                            fpPublishTime = fpPublishTime,
                             riskEvent = RiskEvent.PUBLISH_FAILURE,
                             error =
-                                RiskLogError(
-                                    reason = "persistFingerprintData",
-                                    message = persistResult.e.message ?: "Unknown error",
-                                    status = persistResult.e.hashCode(),
-                                    type = "Device Data Service Error",
-                                    innerExceptionType = persistResult.e.javaClass.name,
-                                ),
+                            RiskLogError(
+                                reason = "persistFingerprintData",
+                                message = persistResult.e.message ?: "Unknown error",
+                                status = persistResult.e.hashCode(),
+                                type = "Device Data Service Error",
+                                innerExceptionType = persistResult.e.javaClass.name,
+                            ),
                         )
-                        PublishDataResult.PublishFailure
+                        return PublishDataResult.PublishFailure
+                    }
+
+                    else -> {
+                        loggerService.log(
+                            blockTime = blockTime,
+                            fpLoadTime = fpLoadTime,
+                            fpPublishTime = fpPublishTime,
+                            riskEvent = RiskEvent.PUBLISH_FAILURE,
+                            error =
+                            RiskLogError(
+                                reason = "persistFingerprintData",
+                                message = "Unknown error",
+                                status = null,
+                                type = "Device Data Service Error",
+                                innerExceptionType = "Unknown error",
+                            ),
+                        )
+                        return PublishDataResult.PublishFailure
                     }
                 }
             }
 
             is FingerprintResult.Failure -> {
                 loggerService.log(
+                    blockTime = blockTime,
+                    fpLoadTime = fpLoadTime,
                     riskEvent = RiskEvent.PUBLISH_FAILURE,
                     error =
-                        RiskLogError(
-                            reason = "publishData",
-                            message = fingerprintResult.description,
-                            status = null,
-                            type = "Fingerprint Service Error",
-                        ),
+                    RiskLogError(
+                        reason = "publishData",
+                        message = fingerprintResult.description,
+                        status = null,
+                        type = "Fingerprint Service Error",
+                    ),
                 )
-                PublishDataResult.PublishFailure
+                return PublishDataResult.PublishFailure
+            }
+
+            else -> {
+                loggerService.log(
+                    blockTime = blockTime,
+                    fpLoadTime = fpLoadTime,
+                    riskEvent = RiskEvent.PUBLISH_FAILURE,
+                    error =
+                    RiskLogError(
+                        reason = "publishData",
+                        message = "Unknown error",
+                        status = null,
+                        type = "Fingerprint Service Error",
+                    ),
+                )
+                return PublishDataResult.PublishFailure
             }
         }
+    }
 }
 
 public sealed class PublishDataResult {
