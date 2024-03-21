@@ -18,6 +18,7 @@ internal class RiskSDKInternalConfigTestImpl(
     override val fingerprintEndpoint: String,
     override val integrationType: RiskIntegrationType,
     override val sourceType: SourceType,
+    override val correlationId: String? = null
 ) : RiskSDKInternalConfig
 
 class DeviceDataServiceTest {
