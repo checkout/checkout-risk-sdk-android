@@ -182,6 +182,7 @@ internal class LoggerService(
             when (riskEvent) {
                 RiskEvent.PUBLISHED, RiskEvent.COLLECTED ->
                     mapOf(
+                        "CorrelationId" to internalConfig.correlationId,
                         "Block" to blockTime,
                         "DeviceDataPersist" to deviceDataPersistTime,
                         "FpLoad" to fpLoadTime,
@@ -199,6 +200,7 @@ internal class LoggerService(
 
                 RiskEvent.PUBLISH_FAILURE, RiskEvent.LOAD_FAILURE, RiskEvent.PUBLISH_DISABLED ->
                     mapOf(
+                        "CorrelationId" to internalConfig.correlationId,
                         "Block" to blockTime,
                         "DeviceDataPersist" to deviceDataPersistTime,
                         "FpLoad" to fpLoadTime,

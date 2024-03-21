@@ -4,6 +4,7 @@ public data class RiskConfig(
     val publicKey: String,
     val environment: RiskEnvironment,
     val framesMode: Boolean = false,
+    val correlationId: String? = null
 )
 
 internal interface RiskSDKInternalConfig {
@@ -14,11 +15,13 @@ internal interface RiskSDKInternalConfig {
     val fingerprintEndpoint: String
     val integrationType: RiskIntegrationType
     val sourceType: SourceType
+    val correlationId: String?
 }
 
 internal data class RiskSDKInternalConfigImpl(
     val config: RiskConfig,
 ) : RiskSDKInternalConfig {
+    override val correlationId: String? = if (config.framesMode) (config.correlationId) else null
     override var merchantPublicKey: String = config.publicKey
     override val framesMode: Boolean = config.framesMode
     override val environment: RiskEnvironment = config.environment

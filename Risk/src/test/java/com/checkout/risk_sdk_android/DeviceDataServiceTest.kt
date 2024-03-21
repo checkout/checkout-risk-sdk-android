@@ -18,6 +18,7 @@ internal class RiskSDKInternalConfigTestImpl(
     override val fingerprintEndpoint: String,
     override val integrationType: RiskIntegrationType,
     override val sourceType: SourceType,
+    override val correlationId: String? = null
 ) : RiskSDKInternalConfig
 
 class DeviceDataServiceTest {
@@ -139,7 +140,7 @@ class DeviceDataServiceTest {
 
         Assert.assertEquals("PUT", request.method)
         Assert.assertEquals(
-            "/collect/fingerprint?riskSdkVersion=1.0.5",
+            "/collect/fingerprint?riskSdkVersion=1.0.6",
             request.path,
         )
 
