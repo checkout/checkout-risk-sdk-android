@@ -129,7 +129,7 @@ The package exposes two methods:
     <summary>Arguments</summary>
 
     ```kotlin
-    public suspend fun publishData(cardToken: string? = null): PublishDataResult {
+    public suspend fun publishData(cardToken: String? = null): PublishDataResult {
     ...
     }
     ```
