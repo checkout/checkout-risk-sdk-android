@@ -12,13 +12,12 @@ import java.io.InputStreamReader
 
 internal class RiskSDKInternalConfigTestImpl(
     override val merchantPublicKey: String,
-    override val framesMode: Boolean,
+    override val framesOptions: FramesOptions? = null,
     override val environment: RiskEnvironment,
     override val deviceDataEndpoint: String,
     override val fingerprintEndpoint: String,
     override val integrationType: RiskIntegrationType,
     override val sourceType: SourceType,
-    override val correlationId: String? = null
 ) : RiskSDKInternalConfig
 
 class DeviceDataServiceTest {
@@ -46,7 +45,6 @@ class DeviceDataServiceTest {
         val internalConfig =
             RiskSDKInternalConfigTestImpl(
                 merchantPublicKey = "pk_test_key",
-                framesMode = false,
                 environment = RiskEnvironment.QA,
                 deviceDataEndpoint = mockWebServer.url("/").toString(),
                 fingerprintEndpoint = mockWebServer.url("/").toString(),
@@ -84,7 +82,6 @@ class DeviceDataServiceTest {
         val internalConfig =
             RiskSDKInternalConfigTestImpl(
                 merchantPublicKey = "pk_test_key",
-                framesMode = false,
                 environment = RiskEnvironment.QA,
                 deviceDataEndpoint = mockWebServer.url("/").toString(),
                 fingerprintEndpoint = mockWebServer.url("/").toString(),
@@ -115,7 +112,6 @@ class DeviceDataServiceTest {
         val internalConfig =
             RiskSDKInternalConfigTestImpl(
                 merchantPublicKey = "pk_test_key",
-                framesMode = false,
                 environment = RiskEnvironment.QA,
                 deviceDataEndpoint = mockWebServer.url("/").toString(),
                 fingerprintEndpoint = mockWebServer.url("/").toString(),
@@ -140,7 +136,7 @@ class DeviceDataServiceTest {
 
         Assert.assertEquals("PUT", request.method)
         Assert.assertEquals(
-            "/collect/fingerprint?riskSdkVersion=1.0.6",
+            "/collect/fingerprint?riskSdkVersion=2.0.0",
             request.path,
         )
 
@@ -170,7 +166,6 @@ class DeviceDataServiceTest {
         val internalConfig =
             RiskSDKInternalConfigTestImpl(
                 merchantPublicKey = "pk_test_key",
-                framesMode = false,
                 environment = RiskEnvironment.QA,
                 deviceDataEndpoint = mockWebServer.url("/").toString(),
                 fingerprintEndpoint = mockWebServer.url("/").toString(),
