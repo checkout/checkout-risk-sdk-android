@@ -4,6 +4,7 @@ import android.content.Context
 import com.checkout.eventlogger.BuildConfig
 import com.checkout.eventlogger.CheckoutEventLogger
 import com.checkout.eventlogger.Environment
+import com.checkout.eventlogger.METADATA_CORRELATION_ID
 import com.checkout.eventlogger.domain.model.Event
 import com.checkout.eventlogger.domain.model.MonitoringLevel
 import com.checkout.eventlogger.domain.model.RemoteProcessorMetadata
@@ -69,31 +70,33 @@ internal class LoggerService(
         }
 
     init {
-
-        val logEnvironment: Environment =
-            when (internalConfig.environment) {
-                RiskEnvironment.QA, RiskEnvironment.SANDBOX -> Environment.SANDBOX
-                RiskEnvironment.PRODUCTION -> Environment.PRODUCTION
-            }
-
         initialise(
             context = context,
-            environment = logEnvironment,
-            identifier = PRODUCT_IDENTIFIER,
-            version = CKO_LOGGER_PRODUCT_VERSION
+            internalConfig = internalConfig
         )
     }
 
     private fun initialise(
         context: Context,
-        environment: Environment,
-        identifier: String,
-        version: String,
+        internalConfig: RiskSDKInternalConfig
     ) {
+        val identifier = internalConfig.framesOptions?.productIdentifier ?: PRODUCT_IDENTIFIER
+        val version = internalConfig.framesOptions?.version ?: CKO_LOGGER_PRODUCT_VERSION
+        val correlationId = internalConfig.framesOptions?.correlationId
+        val environment: Environment =
+            when (internalConfig.environment) {
+                RiskEnvironment.QA, RiskEnvironment.SANDBOX -> Environment.SANDBOX
+                RiskEnvironment.PRODUCTION -> Environment.PRODUCTION
+            }
+
         logger.enableRemoteProcessor(
             environment.toLoggingEnvironment(),
             provideProcessorMetadata(context, environment, identifier, version),
         )
+
+        if (correlationId != null) {
+            logger.addMetadata(METADATA_CORRELATION_ID, correlationId)
+        }
     }
 
     private fun provideProcessorMetadata(
@@ -171,6 +174,7 @@ internal class LoggerService(
         val timeZoneLog = TimeZone.getDefault().id
         val maskedPublicKey = getMaskedPublicKey(internalConfig.merchantPublicKey)
         val ddTags = getDDTags(internalConfig.environment.name.lowercase(Locale.ROOT))
+        val framesMode = internalConfig.framesOptions != null
         val monitoringLevel: MonitoringLevel =
             when (riskEvent) {
                 RiskEvent.PUBLISHED, RiskEvent.COLLECTED -> MonitoringLevel.INFO
@@ -182,14 +186,13 @@ internal class LoggerService(
             when (riskEvent) {
                 RiskEvent.PUBLISHED, RiskEvent.COLLECTED ->
                     mapOf(
-                        "CorrelationId" to internalConfig.correlationId,
                         "Block" to blockTime,
                         "DeviceDataPersist" to deviceDataPersistTime,
                         "FpLoad" to fpLoadTime,
                         "FpPublish" to fpPublishTime,
                         "Total" to totalLatency,
                         "EventType" to riskEvent.rawValue,
-                        "FramesMode" to internalConfig.framesMode,
+                        "FramesMode" to framesMode,
                         "MaskedPublicKey" to maskedPublicKey,
                         "ddTags" to ddTags,
                         "RiskSDKVersion" to Constants.RISK_PACKAGE_VERSION,
@@ -200,14 +203,13 @@ internal class LoggerService(
 
                 RiskEvent.PUBLISH_FAILURE, RiskEvent.LOAD_FAILURE, RiskEvent.PUBLISH_DISABLED ->
                     mapOf(
-                        "CorrelationId" to internalConfig.correlationId,
                         "Block" to blockTime,
                         "DeviceDataPersist" to deviceDataPersistTime,
                         "FpLoad" to fpLoadTime,
                         "FpPublish" to fpPublishTime,
                         "Total" to totalLatency,
                         "EventType" to riskEvent.rawValue,
-                        "FramesMode" to internalConfig.framesMode,
+                        "FramesMode" to framesMode,
                         "MaskedPublicKey" to maskedPublicKey,
                         "ddTags" to ddTags,
                         "RiskSDKVersion" to Constants.RISK_PACKAGE_VERSION,
@@ -222,7 +224,7 @@ internal class LoggerService(
         return LoggingEvent(
             monitoringLevel = monitoringLevel,
             properties = properties,
-            typeIdentifier = Constants.LOGGER_TYPE_IDENTIFIER,
+            typeIdentifier = riskEvent.rawValue,
         )
     }
 

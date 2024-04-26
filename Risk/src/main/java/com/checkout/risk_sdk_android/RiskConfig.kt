@@ -3,27 +3,32 @@ package com.checkout.risk
 public data class RiskConfig(
     val publicKey: String,
     val environment: RiskEnvironment,
-    val framesMode: Boolean = false,
-    val correlationId: String? = null
+    val framesOptions: FramesOptions? = null,
+)
+
+public data class FramesOptions(
+    val version: String,
+    val productIdentifier: String,
+    val correlationId: String,
 )
 
 internal interface RiskSDKInternalConfig {
     val merchantPublicKey: String
-    val framesMode: Boolean
     val environment: RiskEnvironment
     val deviceDataEndpoint: String
     val fingerprintEndpoint: String
     val integrationType: RiskIntegrationType
     val sourceType: SourceType
-    val correlationId: String?
+    val framesOptions: FramesOptions?
 }
 
 internal data class RiskSDKInternalConfigImpl(
     val config: RiskConfig,
 ) : RiskSDKInternalConfig {
-    override val correlationId: String? = if (config.framesMode) (config.correlationId) else null
+    private val framesMode: Boolean = config.framesOptions !== null
+
+    override val framesOptions: FramesOptions? = config.framesOptions
     override var merchantPublicKey: String = config.publicKey
-    override val framesMode: Boolean = config.framesMode
     override val environment: RiskEnvironment = config.environment
     override val deviceDataEndpoint: String
     override val fingerprintEndpoint: String
