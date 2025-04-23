@@ -136,7 +136,7 @@ class DeviceDataServiceTest {
 
         Assert.assertEquals("PUT", request.method)
         Assert.assertEquals(
-            "/collect/fingerprint?riskSdkVersion=2.0.0",
+            "/collect/fingerprint?riskSdkVersion=2.1.0",
             request.path,
         )
 
