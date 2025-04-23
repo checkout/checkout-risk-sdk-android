@@ -73,7 +73,7 @@ dependencies {
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("com.fingerprint.android:pro:2.3.4")
+    implementation("com.fingerprint.android:pro:2.7.0")
     implementation("com.checkout:checkout-sdk-event-logger-android:1.0.1")
     implementation("com.google.android.material:material:1.10.0")
 
@@ -92,7 +92,7 @@ afterEvaluate {
                 from(components.getByName("release"))
                 groupId = "com.github.checkout"
                 artifactId = "checkout-risk-sdk-android"
-                version = "2.0.0"
+                version = "2.1.0"
             }
         }
     }
