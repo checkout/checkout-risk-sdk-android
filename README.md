@@ -18,9 +18,9 @@ The package helps collect device data for merchants with direct integration (sta
 
 
 ## Requirements
-- Android minimum SDK 21
+- Android minimum SDK 23
 
-> Compatibility verified with `targetSdk` versions 21 to 33
+> Compatibility verified with `targetSdk` versions 23 to 34
 
 ## Documentation
 ### Usage guide
