@@ -78,6 +78,7 @@ fun MyScreen(context: Context) {
                 context,
                 RiskConfig(
                     BuildConfig.SAMPLE_MERCHANT_PUBLIC_KEY,
+                    BuildConfig.SAMPLE_MERCHANT_MSSD,
                     RiskEnvironment.QA
                 ),
             ).let {

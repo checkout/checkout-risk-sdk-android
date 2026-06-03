@@ -2,6 +2,7 @@ package com.checkout.risk
 
 public data class RiskConfig(
     val publicKey: String,
+    val mssd: String,    
     val environment: RiskEnvironment,
     val framesOptions: FramesOptions? = null,
 )
@@ -40,17 +41,17 @@ internal data class RiskSDKInternalConfigImpl(
     init {
         when (environment) {
             RiskEnvironment.QA -> {
-                deviceDataEndpoint = "https://prism-qa.ckotech.co"
+                deviceDataEndpoint = "https://${config.mssd}.devices-egw.cko-qa.ckotech.co"
                 fingerprintEndpoint = "https://fpjs.cko-qa.ckotech.co"
             }
 
             RiskEnvironment.SANDBOX -> {
-                deviceDataEndpoint = "https://risk.sandbox.checkout.com"
+                deviceDataEndpoint = "https://${config.mssd}.devices.api.sandbox.checkout.com"
                 fingerprintEndpoint = "https://fpjs.sandbox.checkout.com"
             }
 
             RiskEnvironment.PRODUCTION -> {
-                deviceDataEndpoint = "https://risk.checkout.com"
+                deviceDataEndpoint = "https://${config.mssd}.devices.api.checkout.com"
                 fingerprintEndpoint = "https://fpjs.checkout.com"
             }
         }
