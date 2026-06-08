@@ -23,6 +23,11 @@ android {
             "SAMPLE_MERCHANT_PUBLIC_KEY",
             "\"${System.getenv()["SAMPLE_MERCHANT_PUBLIC_KEY"]}\"",
         )
+        buildConfigField(
+            "String",
+            "SAMPLE_MERCHANT_MSSD",
+            "\"${System.getenv()["SAMPLE_MERCHANT_MSSD"]}\"",
+        )
     }
 
     buildTypes {
