@@ -70,10 +70,14 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
 
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.fingerprint.android:pro:2.14.0")
+    // Open-source device fingerprint collector (MIT licensed). Runs alongside PRO
+    // as the `fingerprint_os` collector. See README "Device collectors".
+    implementation("com.github.fingerprintjs:fingerprint-android:2.2.0")
     implementation("com.checkout:checkout-sdk-event-logger-android:1.0.1")
     implementation("com.google.android.material:material:1.10.0")
 
@@ -92,7 +96,7 @@ afterEvaluate {
                 from(components.getByName("release"))
                 groupId = "com.github.checkout"
                 artifactId = "checkout-risk-sdk-android"
-                version = "2.2.0"
+                version = "2.4.0"
             }
         }
     }

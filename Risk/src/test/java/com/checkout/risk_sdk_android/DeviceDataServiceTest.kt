@@ -57,8 +57,11 @@ class DeviceDataServiceTest {
         runTest {
             deviceDataService.getConfiguration().let {
                 if (it is NetworkResult.Success) {
-                    Assert.assertEquals(true, it.data.fingerprintIntegration.enabled)
-                    Assert.assertEquals("pk_test_key", it.data.fingerprintIntegration.publicKey)
+                    Assert.assertEquals(
+                        listOf("fingerprint", "fingerprint_os"),
+                        it.data.dataCollectors,
+                    )
+                    Assert.assertEquals("pk_test_key", it.data.publicKey)
                 }
             }
         }
@@ -66,7 +69,7 @@ class DeviceDataServiceTest {
         val request = mockWebServer.takeRequest()
         Assert.assertEquals("GET", request.method)
         Assert.assertEquals(
-            "/collect/configuration",
+            "/configurations",
             request.path.toString().split('?')[0],
         )
     }
@@ -121,8 +124,14 @@ class DeviceDataServiceTest {
 
         val deviceDataService = DeviceDataService(internalConfig)
 
+        val collectors =
+            listOf(
+                CollectorData(collector = "fingerprint", sealedResult = null),
+                CollectorData(collector = "fingerprint_os", sealedResult = "c2VhbGVkX29z"),
+            )
+
         runTest {
-            deviceDataService.persistFingerprintData("fp_data", "card_token").let {
+            deviceDataService.persistFingerprintData("fp_data", "card_token", collectors).let {
                 if (it is NetworkResult.Success) {
                     Assert.assertEquals(
                         PersistFingerprintDataResponse("1234567890"),
@@ -136,17 +145,18 @@ class DeviceDataServiceTest {
 
         Assert.assertEquals("PUT", request.method)
         Assert.assertEquals(
-            "/collect/fingerprint?riskSdkVersion=2.3.0",
+            "/fingerprint/v2?riskSdkVersion=${Constants.RISK_PACKAGE_VERSION}",
             request.path,
         )
 
         val expected =
             Gson().toJson(
-                object {
-                    val fp_request_id = "fp_data"
-                    val integration_type = "RiskAndroidStandalone"
-                    val card_token = "card_token"
-                },
+                PersistFingerprintDataRequest(
+                    fpRequestId = "fp_data",
+                    integrationType = "RiskAndroidStandalone",
+                    cardToken = "card_token",
+                    collectors = collectors,
+                ),
             )
 
         Assert.assertEquals(
@@ -176,7 +186,11 @@ class DeviceDataServiceTest {
         val deviceDataService = DeviceDataService(internalConfig)
 
         runTest {
-            deviceDataService.persistFingerprintData("fp_data", "card_token").let {
+            deviceDataService.persistFingerprintData(
+                "fp_data",
+                "card_token",
+                listOf(CollectorData(collector = "fingerprint", sealedResult = null)),
+            ).let {
                 if (it is NetworkResult.Error) {
                     Assert.assertEquals("Server Error", it.message)
                 }

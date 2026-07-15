@@ -48,6 +48,7 @@ internal interface LoggerServiceProtocol {
         deviceSessionID: String? = null,
         requestID: String? = null,
         error: RiskLogError? = null,
+        deviceCollectorProviders: List<String>? = null,
     )
 }
 
@@ -132,6 +133,7 @@ internal class LoggerService(
         deviceSessionID: String?,
         requestID: String?,
         error: RiskLogError?,
+        deviceCollectorProviders: List<String>?,
     ) {
         var totalLatency = 0.00
         arrayOf(blockTime, deviceDataPersistTime, fpLoadTime, fpPublishTime).forEach { item ->
@@ -147,7 +149,8 @@ internal class LoggerService(
             totalLatency,
             deviceSessionID,
             requestID,
-            error
+            error,
+            deviceCollectorProviders,
         )
 
         logger.logEvent(event)
@@ -170,6 +173,7 @@ internal class LoggerService(
         deviceSessionID: String?,
         requestID: String?,
         error: RiskLogError?,
+        deviceCollectorProviders: List<String>?,
     ): Event {
         val timeZoneLog = TimeZone.getDefault().id
         val maskedPublicKey = getMaskedPublicKey(internalConfig.merchantPublicKey)
@@ -199,6 +203,7 @@ internal class LoggerService(
                         "Timezone" to timeZoneLog,
                         "FpRequestId" to requestID,
                         "DeviceSessionId" to deviceSessionID,
+                        "DeviceCollectorProviders" to deviceCollectorProviders?.joinToString(","),
                     ).filterValues { it != null }.mapValues { it.value!! }
 
                 RiskEvent.PUBLISH_FAILURE, RiskEvent.LOAD_FAILURE, RiskEvent.PUBLISH_DISABLED ->
