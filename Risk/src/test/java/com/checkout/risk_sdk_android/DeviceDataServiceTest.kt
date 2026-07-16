@@ -75,6 +75,69 @@ class DeviceDataServiceTest {
     }
 
     @Test
+    fun `getConfiguration() should parse the simple collector config`() {
+        val response =
+            MockResponse()
+                .setResponseCode(200)
+                .setBody(MockResponseFileReader("getConfiguration_simple_response_200.json").content)
+
+        mockWebServer.enqueue(response)
+
+        val internalConfig =
+            RiskSDKInternalConfigTestImpl(
+                merchantPublicKey = "pk_test_key",
+                environment = RiskEnvironment.QA,
+                deviceDataEndpoint = mockWebServer.url("/").toString(),
+                fingerprintEndpoint = mockWebServer.url("/").toString(),
+                integrationType = RiskIntegrationType.STANDALONE,
+                sourceType = SourceType.RISK_SDK,
+            )
+
+        val deviceDataService = DeviceDataService(internalConfig)
+
+        runTest {
+            val result = deviceDataService.getConfiguration()
+            Assert.assertTrue(result is NetworkResult.Success)
+
+            val config = (result as NetworkResult.Success).data
+            Assert.assertEquals(listOf("simple", "fingerprint"), config.dataCollectors)
+            Assert.assertEquals(
+                listOf("canvas.value.geometry", "canvas.value.text"),
+                config.simple?.dropFieldPaths,
+            )
+            Assert.assertEquals(1000L, config.simple?.timeoutMs)
+        }
+    }
+
+    @Test
+    fun `getConfiguration() leaves the simple config null when absent`() {
+        val response =
+            MockResponse()
+                .setResponseCode(200)
+                .setBody(MockResponseFileReader("getConfiguration_response_200.json").content)
+
+        mockWebServer.enqueue(response)
+
+        val internalConfig =
+            RiskSDKInternalConfigTestImpl(
+                merchantPublicKey = "pk_test_key",
+                environment = RiskEnvironment.QA,
+                deviceDataEndpoint = mockWebServer.url("/").toString(),
+                fingerprintEndpoint = mockWebServer.url("/").toString(),
+                integrationType = RiskIntegrationType.STANDALONE,
+                sourceType = SourceType.RISK_SDK,
+            )
+
+        val deviceDataService = DeviceDataService(internalConfig)
+
+        runTest {
+            val result = deviceDataService.getConfiguration()
+            Assert.assertTrue(result is NetworkResult.Success)
+            Assert.assertNull((result as NetworkResult.Success).data.simple)
+        }
+    }
+
+    @Test
     fun `getConfiguration() should return a network error when unsuccessful`() {
         val response =
             MockResponse()

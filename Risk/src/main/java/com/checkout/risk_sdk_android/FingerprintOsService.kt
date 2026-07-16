@@ -4,10 +4,7 @@ import android.content.Context
 import android.util.Base64
 import com.fingerprintjs.android.fingerprint.Fingerprinter
 import com.fingerprintjs.android.fingerprint.FingerprinterFactory
-import com.fingerprintjs.android.fingerprint.fingerprinting_signals.FingerprintingSignal
 import com.fingerprintjs.android.fingerprint.signal_providers.StabilityLevel
-import com.google.gson.Gson
-import com.google.gson.JsonObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.UUID
@@ -33,7 +30,6 @@ internal class FingerprintOsService(
     private val dropFieldPaths: List<String> = emptyList(),
 ) {
     private val fingerprinter: Fingerprinter = FingerprinterFactory.create(context)
-    private val gson = Gson()
 
     /**
      * Collects the open-source device data asynchronously.
@@ -64,24 +60,10 @@ internal class FingerprintOsService(
                 }
 
             val requestId = UUID.randomUUID().toString()
-
-            val device = linkedMapOf<String, String>("visitor_id" to deviceId)
-            signals.forEach { signal -> device[signalKey(signal)] = signal.getHashableString() }
-
-            // Drop the fields the backend asked us not to send, then assemble the payload.
-            val deviceJson = gson.toJsonTree(device).asJsonObject
-            dropFieldPaths.forEach { path -> dropPath(deviceJson, path) }
-
-            val payload =
-                JsonObject().apply {
-                    addProperty("requestId", requestId)
-                    add("device", deviceJson)
-                }
+            val payloadJson =
+                SimpleCollectorPayload.build(deviceId, requestId, signals, dropFieldPaths)
             val sealedResult =
-                Base64.encodeToString(
-                    gson.toJson(payload).toByteArray(Charsets.UTF_8),
-                    Base64.NO_WRAP,
-                )
+                Base64.encodeToString(payloadJson.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
 
             FingerprintOsResult.Success(
                 deviceId = deviceId,
@@ -98,35 +80,6 @@ internal class FingerprintOsService(
                 continuation.resume(result.deviceId)
             }
         }
-
-    /**
-     * Removes the field at [path] (dot-notation) from [root], walking nested objects. A path
-     * that does not fully resolve to an existing field is a no-op, so stale or platform-specific
-     * paths returned by the backend are simply ignored.
-     */
-    private fun dropPath(
-        root: JsonObject,
-        path: String,
-    ) {
-        val segments = path.split('.')
-        var parent: JsonObject = root
-        for (i in 0 until segments.size - 1) {
-            val child = parent.get(segments[i])
-            if (child == null || !child.isJsonObject) return
-            parent = child.asJsonObject
-        }
-        parent.remove(segments.last())
-    }
-
-    /**
-     * Derives a stable, readable key for a signal from its class name, e.g.
-     * `ManufacturerNameSignal` -> `manufacturerName`.
-     */
-    private fun signalKey(signal: FingerprintingSignal<*>): String {
-        val name = signal::class.simpleName ?: return "unknown"
-        val stripped = name.removeSuffix("Signal")
-        return stripped.replaceFirstChar { it.lowercase() }
-    }
 }
 
 internal sealed class FingerprintOsResult {

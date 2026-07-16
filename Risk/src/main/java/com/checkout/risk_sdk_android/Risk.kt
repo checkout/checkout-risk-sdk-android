@@ -218,7 +218,7 @@ internal class RiskInternal(
             // The backend keys device data on fp_request_id. PRO provides one; when only the
             // OS collector ran there is no server-side request id, so reuse the client-generated
             // id embedded in the OS collector's sealed_result payload.
-            val requestId = proRequestId ?: osRequestId ?: UUID.randomUUID().toString()
+            val requestId = resolveRequestId(proRequestId, osRequestId)
 
             loggerService.log(
                 blockTime = blockTime,
@@ -289,6 +289,16 @@ internal class RiskInternal(
 
     private fun elapsedMs(startNanos: Long): Double = (System.nanoTime() - startNanos) / 1_000_000.0
 }
+
+/**
+ * Resolves the root `fp_request_id`. The PRO collector's server-side id wins; otherwise the
+ * OS collector's client-generated id (which matches the one embedded in its sealed_result) is
+ * used; failing both, a fresh id is generated.
+ */
+internal fun resolveRequestId(
+    proRequestId: String?,
+    osRequestId: String?,
+): String = proRequestId ?: osRequestId ?: UUID.randomUUID().toString()
 
 public sealed class PublishDataResult {
     public data class Success(val deviceSessionId: String) : PublishDataResult()
