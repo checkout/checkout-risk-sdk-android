@@ -64,7 +64,10 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
 
                     val fingerprintOsService =
                         if (osEnabled) {
-                            FingerprintOsService(applicationContext)
+                            FingerprintOsService(
+                                applicationContext,
+                                dropFieldPaths = deviceDataConfig.data.simple?.dropFieldPaths ?: emptyList(),
+                            )
                         } else {
                             null
                         }

@@ -119,6 +119,22 @@ internal data class DeviceDataConfiguration(
     val dataCollectors: List<String> = emptyList(),
     @SerializedName("public_key")
     val publicKey: String?,
+    @SerializedName("simple")
+    val simple: SimpleCollectorConfig? = null,
+)
+
+/**
+ * Per-collector configuration for the `simple` (`fingerprint_os`) collector.
+ *
+ * @property dropFieldPaths Dot-notation paths into the collected `device` data that must be
+ * removed before the payload is base64-encoded (e.g. "canvas.value.geometry").
+ * @property timeoutMs Collection timeout budget in milliseconds.
+ */
+internal data class SimpleCollectorConfig(
+    @SerializedName("drop_field_paths")
+    val dropFieldPaths: List<String> = emptyList(),
+    @SerializedName("timeout_ms")
+    val timeoutMs: Long? = null,
 )
 
 internal data class PersistFingerprintDataResponse(

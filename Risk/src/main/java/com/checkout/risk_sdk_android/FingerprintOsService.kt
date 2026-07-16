@@ -7,6 +7,7 @@ import com.fingerprintjs.android.fingerprint.FingerprinterFactory
 import com.fingerprintjs.android.fingerprint.fingerprinting_signals.FingerprintingSignal
 import com.fingerprintjs.android.fingerprint.signal_providers.StabilityLevel
 import com.google.gson.Gson
+import com.google.gson.JsonObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.UUID
@@ -23,9 +24,13 @@ import kotlin.coroutines.suspendCoroutine
  * a second, free device id alongside PRO for downstream comparison.
  *
  * @param context The Android context.
+ * @param dropFieldPaths Dot-notation paths into the `device` data that the `configurations`
+ * endpoint asked to drop before encoding (e.g. "canvas.value.geometry"). Paths that do not
+ * resolve against the collected data are ignored.
  */
 internal class FingerprintOsService(
     context: Context,
+    private val dropFieldPaths: List<String> = emptyList(),
 ) {
     private val fingerprinter: Fingerprinter = FingerprinterFactory.create(context)
     private val gson = Gson()
@@ -63,7 +68,15 @@ internal class FingerprintOsService(
             val device = linkedMapOf<String, String>("visitor_id" to deviceId)
             signals.forEach { signal -> device[signalKey(signal)] = signal.getHashableString() }
 
-            val payload = mapOf("requestId" to requestId, "device" to device)
+            // Drop the fields the backend asked us not to send, then assemble the payload.
+            val deviceJson = gson.toJsonTree(device).asJsonObject
+            dropFieldPaths.forEach { path -> dropPath(deviceJson, path) }
+
+            val payload =
+                JsonObject().apply {
+                    addProperty("requestId", requestId)
+                    add("device", deviceJson)
+                }
             val sealedResult =
                 Base64.encodeToString(
                     gson.toJson(payload).toByteArray(Charsets.UTF_8),
@@ -85,6 +98,25 @@ internal class FingerprintOsService(
                 continuation.resume(result.deviceId)
             }
         }
+
+    /**
+     * Removes the field at [path] (dot-notation) from [root], walking nested objects. A path
+     * that does not fully resolve to an existing field is a no-op, so stale or platform-specific
+     * paths returned by the backend are simply ignored.
+     */
+    private fun dropPath(
+        root: JsonObject,
+        path: String,
+    ) {
+        val segments = path.split('.')
+        var parent: JsonObject = root
+        for (i in 0 until segments.size - 1) {
+            val child = parent.get(segments[i])
+            if (child == null || !child.isJsonObject) return
+            parent = child.asJsonObject
+        }
+        parent.remove(segments.last())
+    }
 
     /**
      * Derives a stable, readable key for a signal from its class name, e.g.
