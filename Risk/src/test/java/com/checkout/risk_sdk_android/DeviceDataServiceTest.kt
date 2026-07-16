@@ -69,7 +69,7 @@ class DeviceDataServiceTest {
         val request = mockWebServer.takeRequest()
         Assert.assertEquals("GET", request.method)
         Assert.assertEquals(
-            "/configurations",
+            "/collect/configurations",
             request.path.toString().split('?')[0],
         )
     }
@@ -145,7 +145,7 @@ class DeviceDataServiceTest {
 
         Assert.assertEquals("PUT", request.method)
         Assert.assertEquals(
-            "/fingerprint/v2?riskSdkVersion=${Constants.RISK_PACKAGE_VERSION}",
+            "/collect/fingerprint/v2?riskSdkVersion=${Constants.RISK_PACKAGE_VERSION}",
             request.path,
         )
 

@@ -148,6 +148,7 @@ internal class RiskInternal(
             val collectors = mutableListOf<CollectorData>()
             val providers = mutableListOf<String>()
             var proRequestId: String? = null
+            var osRequestId: String? = null
 
             when (proResult) {
                 is FingerprintResult.Success -> {
@@ -177,6 +178,7 @@ internal class RiskInternal(
 
             when (osResult) {
                 is FingerprintOsResult.Success -> {
+                    osRequestId = osResult.requestId
                     collectors.add(
                         CollectorData(
                             DeviceCollector.FINGERPRINT_OS.collectorName,
@@ -211,8 +213,9 @@ internal class RiskInternal(
             }
 
             // The backend keys device data on fp_request_id. PRO provides one; when only the
-            // OS collector ran there is no server-side request id, so generate a client one.
-            val requestId = proRequestId ?: UUID.randomUUID().toString()
+            // OS collector ran there is no server-side request id, so reuse the client-generated
+            // id embedded in the OS collector's sealed_result payload.
+            val requestId = proRequestId ?: osRequestId ?: UUID.randomUUID().toString()
 
             loggerService.log(
                 blockTime = blockTime,

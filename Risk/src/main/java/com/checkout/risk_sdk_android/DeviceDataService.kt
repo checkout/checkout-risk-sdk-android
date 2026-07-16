@@ -142,8 +142,9 @@ internal data class PersistFingerprintDataRequest(
  * `device_collector_provider` recorded on prism_events from [collector].
  *
  * For the PRO collector the raw identifier travels in the root `fp_request_id`, so
- * [sealedResult] is null. For the open-source `fingerprint_os` collector the device id
- * is base64-encoded into [sealedResult].
+ * [sealedResult] is null. For the open-source `fingerprint_os` collector the collected
+ * device data (device id plus raw signals) is JSON-serialised and base64-encoded into
+ * [sealedResult].
  */
 internal data class CollectorData(
     @SerializedName("collector")
