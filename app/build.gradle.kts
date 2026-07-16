@@ -21,12 +21,12 @@ android {
         buildConfigField(
             "String",
             "SAMPLE_MERCHANT_PUBLIC_KEY",
-            "\"pk_qa_7wzteoyh4nctbkbvghw7eoimiyo\"",
+            "\"${System.getenv()["SAMPLE_MERCHANT_PUBLIC_KEY"]}\"",
         )
         buildConfigField(
             "String",
             "SAMPLE_MERCHANT_MSSD",
-            "\"bc2vfz7p\"",
+            "\"${System.getenv()["SAMPLE_MERCHANT_MSSD"]}\"",
         )
     }
 
