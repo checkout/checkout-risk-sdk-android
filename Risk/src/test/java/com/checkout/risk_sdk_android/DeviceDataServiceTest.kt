@@ -102,7 +102,7 @@ class DeviceDataServiceTest {
             val config = (result as NetworkResult.Success).data
             Assert.assertEquals(listOf("simple", "fingerprint"), config.dataCollectors)
             Assert.assertEquals(
-                listOf("canvas.value.geometry", "canvas.value.text"),
+                listOf("procCpuInfoV2", "canvas.value.text"),
                 config.simple?.dropFieldPaths,
             )
             Assert.assertEquals(1000L, config.simple?.timeoutMs)
