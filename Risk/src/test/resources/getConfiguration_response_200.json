@@ -1,4 +1,4 @@
 {
-  "data_collectors": ["fingerprint", "fingerprint_os"],
+  "data_collectors": ["fingerprint", "simple"],
   "public_key": "pk_test_key"
 }
