@@ -115,6 +115,20 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
                     )
                     return null
                 }
+
+                else -> {
+                    loggerService.log(
+                        riskEvent = RiskEvent.LOAD_FAILURE,
+                        error =
+                        RiskLogError(
+                            reason = "getConfiguration",
+                            message = "Unexpected error",
+                            status = null,
+                            type = "Device Data Service Didn't return"
+                        ),
+                    )
+                    return null
+                }
             }
         }
 
@@ -177,7 +191,7 @@ internal class RiskInternal(
                 }
 
                 null -> Unit // PRO collector not enabled
-                else -> {} // Something has gone wrong
+                else -> Unit // something gone wrong
             }
 
             when (simpleResult) {
@@ -209,6 +223,7 @@ internal class RiskInternal(
                 }
 
                 null -> Unit // simple collector not enabled
+                else -> Unit // something gone wrong
             }
 
             if (collectors.isEmpty()) {
@@ -285,6 +300,22 @@ internal class RiskInternal(
                     )
                     PublishDataResult.PublishFailure
                 }
+
+                else -> {
+                    loggerService.log(
+                        blockTime = blockTime,
+                        fpLoadTime = fpLoadTime,
+                        fpPublishTime = fpPublishTime,
+                        riskEvent = RiskEvent.PUBLISH_FAILURE,
+                        error =
+                        RiskLogError(
+                            reason = "persistFingerprintData",
+                            message = "Unexpected  error",
+                            type = "Device Data Service Error",
+                            status = null
+                        ),
+                    )
+                    PublishDataResult.PublishFailure}
             }
         }
 
