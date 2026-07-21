@@ -35,10 +35,10 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
                     val proEnabled =
                         dataCollectors.contains(DeviceCollector.FINGERPRINT.collectorName) &&
                             publicKey != null
-                    val osEnabled =
-                        dataCollectors.contains(DeviceCollector.FINGERPRINT_OS.collectorName)
+                    val simpleEnabled =
+                        dataCollectors.contains(DeviceCollector.SIMPLE.collectorName)
 
-                    if (!proEnabled && !osEnabled) {
+                    if (!proEnabled && !simpleEnabled) {
                         loggerService.log(
                             riskEvent = RiskEvent.PUBLISH_DISABLED,
                             blockTime = blockTime,
@@ -62,9 +62,9 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
                             null
                         }
 
-                    val fingerprintOsService =
-                        if (osEnabled) {
-                            FingerprintOsService(
+                    val simpleService =
+                        if (simpleEnabled) {
+                            SimpleService(
                                 applicationContext,
                                 dropFieldPaths = deviceDataConfig.data.simple?.dropFieldPaths ?: emptyList(),
                             )
@@ -77,7 +77,7 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
                     return Risk(
                         RiskInternal(
                             fingerprintService,
-                            fingerprintOsService,
+                            simpleService,
                             deviceDataService,
                             loggerService,
                             blockTime,
@@ -128,7 +128,7 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
 
 internal class RiskInternal(
     private val fingerprintService: FingerprintService?,
-    private val fingerprintOsService: FingerprintOsService?,
+    private val simpleService: SimpleService?,
     private val deviceDataService: DeviceDataService,
     private val loggerService: LoggerServiceProtocol,
     private val blockTime: Double,
@@ -141,17 +141,17 @@ internal class RiskInternal(
             // Run every enabled collector concurrently; awaiting both just waits for the
             // slowest. One collector failing does not prevent the others from publishing.
             val proDeferred = fingerprintService?.let { service -> async { service.publishData() } }
-            val osDeferred = fingerprintOsService?.let { service -> async { service.publishData() } }
+            val simpleDeferred = simpleService?.let { service -> async { service.publishData() } }
 
             val proResult = proDeferred?.await()
-            val osResult = osDeferred?.await()
+            val simpleResult = simpleDeferred?.await()
 
             val fpPublishTime = elapsedMs(startFpPublishTime)
 
             val collectors = mutableListOf<CollectorData>()
             val providers = mutableListOf<String>()
             var proRequestId: String? = null
-            var osRequestId: String? = null
+            var simpleRequestId: String? = null
 
             when (proResult) {
                 is FingerprintResult.Success -> {
@@ -177,21 +177,22 @@ internal class RiskInternal(
                 }
 
                 null -> Unit // PRO collector not enabled
+                else -> {} // Something has gone wrong
             }
 
-            when (osResult) {
-                is FingerprintOsResult.Success -> {
-                    osRequestId = osResult.requestId
+            when (simpleResult) {
+                is SimpleResult.Success -> {
+                    simpleRequestId = simpleResult.requestId
                     collectors.add(
                         CollectorData(
-                            DeviceCollector.FINGERPRINT_OS.collectorName,
-                            sealedResult = osResult.sealedResult,
+                            DeviceCollector.SIMPLE.collectorName,
+                            sealedResult = simpleResult.sealedResult,
                         ),
                     )
-                    providers.add(DeviceCollector.FINGERPRINT_OS.collectorName)
+                    providers.add(DeviceCollector.SIMPLE.collectorName)
                 }
 
-                is FingerprintOsResult.Failure -> {
+                is SimpleResult.Failure -> {
                     loggerService.log(
                         blockTime = blockTime,
                         fpLoadTime = fpLoadTime,
@@ -200,14 +201,14 @@ internal class RiskInternal(
                         error =
                             RiskLogError(
                                 reason = "publishData",
-                                message = osResult.description,
+                                message = simpleResult.description,
                                 status = null,
-                                type = "Fingerprint OS Service Error",
+                                type = "Simple Service Error",
                             ),
                     )
                 }
 
-                null -> Unit // OS collector not enabled
+                null -> Unit // simple collector not enabled
             }
 
             if (collectors.isEmpty()) {
@@ -216,9 +217,9 @@ internal class RiskInternal(
             }
 
             // The backend keys device data on fp_request_id. PRO provides one; when only the
-            // OS collector ran there is no server-side request id, so reuse the client-generated
-            // id embedded in the OS collector's sealed_result payload.
-            val requestId = resolveRequestId(proRequestId, osRequestId)
+            // simple collector ran there is no server-side request id, so reuse the client-generated
+            // id embedded in the simple collector's sealed_result payload.
+            val requestId = resolveRequestId(proRequestId, simpleRequestId)
 
             loggerService.log(
                 blockTime = blockTime,
@@ -292,13 +293,13 @@ internal class RiskInternal(
 
 /**
  * Resolves the root `fp_request_id`. The PRO collector's server-side id wins; otherwise the
- * OS collector's client-generated id (which matches the one embedded in its sealed_result) is
+ * simple collector's client-generated id (which matches the one embedded in its sealed_result) is
  * used; failing both, a fresh id is generated.
  */
 internal fun resolveRequestId(
     proRequestId: String?,
-    osRequestId: String?,
-): String = proRequestId ?: osRequestId ?: UUID.randomUUID().toString()
+    simpleRequestId: String?,
+): String = proRequestId ?: simpleRequestId ?: UUID.randomUUID().toString()
 
 public sealed class PublishDataResult {
     public data class Success(val deviceSessionId: String) : PublishDataResult()

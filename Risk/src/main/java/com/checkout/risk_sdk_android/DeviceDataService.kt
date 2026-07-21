@@ -111,7 +111,7 @@ private sealed interface DeviceDataApi {
 
 /**
  * Response of the `configurations` endpoint. [dataCollectors] lists the collectors
- * enabled for the merchant (e.g. "fingerprint", "fingerprint_os"); a collector is
+ * enabled for the merchant (e.g. "fingerprint", "simple"); a collector is
  * considered enabled when its name is present in this list.
  */
 internal data class DeviceDataConfiguration(
@@ -124,7 +124,7 @@ internal data class DeviceDataConfiguration(
 )
 
 /**
- * Per-collector configuration for the `simple` (`fingerprint_os`) collector.
+ * Per-collector configuration for the `simple` collector.
  *
  * @property dropFieldPaths Dot-notation paths into the collected `device` data that must be
  * removed before the payload is base64-encoded (e.g. "canvas.value.geometry").
@@ -158,7 +158,7 @@ internal data class PersistFingerprintDataRequest(
  * `device_collector_provider` recorded on prism_events from [collector].
  *
  * For the PRO collector the raw identifier travels in the root `fp_request_id`, so
- * [sealedResult] is null. For the open-source `fingerprint_os` collector the collected
+ * [sealedResult] is null. For the open-source `simple` collector the collected
  * device data (device id plus raw signals) is JSON-serialised and base64-encoded into
  * [sealedResult].
  */

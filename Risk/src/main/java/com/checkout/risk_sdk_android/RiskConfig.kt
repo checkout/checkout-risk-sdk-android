@@ -85,5 +85,5 @@ internal enum class DeviceCollector(val collectorName: String) {
     FINGERPRINT("fingerprint"),
 
     // Open-source fingerprintjs-android — device id computed locally, no backend call.
-    FINGERPRINT_OS("simple"),
+    SIMPLE("simple"),
 }

@@ -5,8 +5,8 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 
 /**
- * Pure (Android-free) assembly of the `simple` / `fingerprint_os` collector payload, kept
- * separate from [FingerprintOsService] so the serialisation and drop-field logic can be unit
+ * Pure (Android-free) assembly of the `simple` collector payload, kept
+ * separate from [SimpleService] so the serialisation and drop-field logic can be unit
  * tested without a device. The service layer owns the Android-only concerns (running the
  * fingerprinter and base64-encoding the result).
  */

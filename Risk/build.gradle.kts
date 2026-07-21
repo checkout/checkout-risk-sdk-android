@@ -76,7 +76,7 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.fingerprint.android:pro:2.14.0")
     // Open-source device fingerprint collector (MIT licensed). Runs alongside PRO
-    // as the `fingerprint_os` collector. See README "Device collectors".
+    // as the `simple` collector. See README "Device collectors".
     implementation("com.github.fingerprintjs:fingerprint-android:2.2.0")
     implementation("com.checkout:checkout-sdk-event-logger-android:1.0.1")
     implementation("com.google.android.material:material:1.10.0")

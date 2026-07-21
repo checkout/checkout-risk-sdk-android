@@ -14,7 +14,7 @@ import kotlin.coroutines.suspendCoroutine
 /**
  * Service wrapping the open-source
  * [fingerprintjs-android](https://github.com/fingerprintjs/fingerprintjs-android)
- * library — the `fingerprint_os` collector.
+ * library — the `simple` collector.
  *
  * Unlike the PRO collector, this computes a device id entirely on-device with no backend
  * call, so its ability to dedupe similar devices is reduced. Its purpose here is to provide
@@ -25,7 +25,7 @@ import kotlin.coroutines.suspendCoroutine
  * endpoint asked to drop before encoding (e.g. "canvas.value.geometry"). Paths that do not
  * resolve against the collected data are ignored.
  */
-internal class FingerprintOsService(
+internal class SimpleService(
     context: Context,
     private val dropFieldPaths: List<String> = emptyList(),
 ) {
@@ -37,15 +37,15 @@ internal class FingerprintOsService(
      * The raw device signals (manufacturer, model, RAM, sensors, locale, …) are gathered
      * alongside the computed device id and assembled into a `device` object, mirroring the
      * `simple` collector in the JS SDK. That payload is JSON-serialised and base64-encoded
-     * into [FingerprintOsResult.Success.sealedResult] so it can travel in the `sealed_result`
+     * into [SimpleResult.Success.sealedResult] so it can travel in the `sealed_result`
      * field of the `fingerprint/v2` collectors payload.
      *
-     * The generated [FingerprintOsResult.Success.requestId] matches the `requestId` embedded in
+     * The generated [SimpleResult.Success.requestId] matches the `requestId` embedded in
      * the payload; the caller uses it as the root `fp_request_id` when the PRO collector is absent.
      *
-     * @return FingerprintOsResult containing the payload on success, or a message on failure.
+     * @return SimpleResult containing the payload on success, or a message on failure.
      */
-    suspend fun publishData(): FingerprintOsResult =
+    suspend fun publishData(): SimpleResult =
         try {
             val deviceId = awaitDeviceId()
 
@@ -65,13 +65,13 @@ internal class FingerprintOsService(
             val sealedResult =
                 Base64.encodeToString(payloadJson.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
 
-            FingerprintOsResult.Success(
+            SimpleResult.Success(
                 deviceId = deviceId,
                 requestId = requestId,
                 sealedResult = sealedResult,
             )
         } catch (e: Throwable) {
-            FingerprintOsResult.Failure(e.message ?: "Unknown error")
+            SimpleResult.Failure(e.message ?: "Unknown error")
         }
 
     private suspend fun awaitDeviceId(): String =
@@ -82,12 +82,12 @@ internal class FingerprintOsService(
         }
 }
 
-internal sealed class FingerprintOsResult {
+internal sealed class SimpleResult {
     data class Success(
         val deviceId: String,
         val requestId: String,
         val sealedResult: String,
-    ) : FingerprintOsResult()
+    ) : SimpleResult()
 
-    data class Failure(val description: String) : FingerprintOsResult()
+    data class Failure(val description: String) : SimpleResult()
 }

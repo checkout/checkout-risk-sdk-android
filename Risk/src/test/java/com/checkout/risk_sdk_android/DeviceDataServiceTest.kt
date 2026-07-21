@@ -58,7 +58,7 @@ class DeviceDataServiceTest {
             deviceDataService.getConfiguration().let {
                 if (it is NetworkResult.Success) {
                     Assert.assertEquals(
-                        listOf("fingerprint", "fingerprint_os"),
+                        listOf("fingerprint", "simple"),
                         it.data.dataCollectors,
                     )
                     Assert.assertEquals("pk_test_key", it.data.publicKey)
@@ -190,14 +190,14 @@ class DeviceDataServiceTest {
         val collectors =
             listOf(
                 CollectorData(collector = "fingerprint", sealedResult = null),
-                CollectorData(collector = "fingerprint_os", sealedResult = "c2VhbGVkX29z"),
+                CollectorData(collector = "simple", sealedResult = "c2VhbGVkX29z"),
             )
 
         runTest {
             deviceDataService.persistFingerprintData("fp_data", "card_token", collectors).let {
                 if (it is NetworkResult.Success) {
                     Assert.assertEquals(
-                        PersistFingerprintDataResponse("1234567890"),
+                        PersistFingerprintDataResponse("dsid_1234567890"),
                         it.data,
                     )
                 }

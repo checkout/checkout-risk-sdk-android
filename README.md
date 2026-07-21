@@ -156,7 +156,7 @@ no integration changes are required to enable or disable a collector.
 | Collector | Provider (`device_collector_provider`) | Description |
 | --- | --- | --- |
 | FingerprintPRO | `fingerprint` | Highly accurate (~99%) device id resolved server-side. Requires a fingerprint public key. |
-| fingerprintjs (OSS) | `fingerprint_os` | Open-source, on-device device id with no backend call. Runs **in parallel** with PRO when both are enabled. |
+| fingerprintjs (OSS) | `simple` | Open-source, on-device device id with no backend call. Runs **in parallel** with PRO when both are enabled. |
 
 When enabled, each collector's payload is sent on `publishData` in the `fingerprint/v2`
 `collectors` array, tagged with its provider. A single collector failing does not prevent
