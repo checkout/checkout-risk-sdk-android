@@ -75,6 +75,34 @@ class SimpleCollectorPayloadTest {
     }
 
     @Test
+    fun `drops fields from an example simple SDK response, leaving the rest intact`() {
+        // An example of the device payload the simple collector assembles, loaded from a
+        // resource file so it can be swapped for data captured off a real device.
+        val payload =
+            JsonParser
+                .parseString(MockResponseFileReader("simple_device_example.json").content)
+                .asJsonObject
+        val device = payload.getAsJsonObject("device")
+
+        // The drop_field_paths the `configurations` endpoint would return for this collector:
+        // one path that resolves against the device data, and one that does not.
+        val dropFieldPaths = listOf("procCpuInfoV2", "canvas.value.text")
+        dropFieldPaths.forEach { path -> SimpleCollectorPayload.dropPath(device, path) }
+
+        // The resolving path is removed.
+        Assert.assertFalse(device.has("procCpuInfoV2"))
+        // The non-resolving path is a no-op and drops nothing else.
+        Assert.assertTrue(device.has("visitor_id"))
+        Assert.assertTrue(device.has("manufacturerName"))
+        Assert.assertTrue(device.has("modelName"))
+        Assert.assertTrue(device.has("totalRam"))
+        Assert.assertTrue(device.has("batteryHealth"))
+        Assert.assertEquals("a1b2c3d4e5f6a7b8", device.get("visitor_id").asString)
+        Assert.assertEquals("Google", device.get("manufacturerName").asString)
+        Assert.assertEquals("req-example-001", payload.get("requestId").asString)
+    }
+
+    @Test
     fun `deviceKey() strips the Signal suffix and lowercases the first letter`() {
         Assert.assertEquals(
             "manufacturerName",

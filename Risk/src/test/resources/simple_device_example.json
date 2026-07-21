@@ -1,0 +1,14 @@
+{
+  "requestId": "req-example-001",
+  "device": {
+    "visitor_id": "a1b2c3d4e5f6a7b8",
+    "manufacturerName": "Google",
+    "modelName": "Pixel 7",
+    "totalRam": "8000000000",
+    "androidVersion": "14",
+    "kernelName": "Linux",
+    "sensors": "accelerometer;gyroscope;magnetometer",
+    "batteryHealth": "GOOD",
+    "procCpuInfoV2": "processor: 0\nBogoMIPS: 38.40\nFeatures: fp asimd"
+  }
+}
