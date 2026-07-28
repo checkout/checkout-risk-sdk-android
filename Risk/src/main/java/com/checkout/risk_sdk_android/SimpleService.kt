@@ -6,10 +6,11 @@ import com.fingerprintjs.android.fingerprint.Fingerprinter
 import com.fingerprintjs.android.fingerprint.FingerprinterFactory
 import com.fingerprintjs.android.fingerprint.signal_providers.StabilityLevel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 /**
  * Service wrapping the open-source
@@ -24,10 +25,14 @@ import kotlin.coroutines.suspendCoroutine
  * @param dropFieldPaths Dot-notation paths into the `device` data that the `configurations`
  * endpoint asked to drop before encoding (e.g. "canvas.value.geometry"). Paths that do not
  * resolve against the collected data are ignored.
+ * @param timeoutMs Optional collection budget in milliseconds, supplied by the `configurations`
+ * endpoint. When set (and positive), collection that overruns it is abandoned and reported as a
+ * failure rather than blocking `publishData`. Null means collect with no time limit.
  */
 internal class SimpleService(
     context: Context,
     private val dropFieldPaths: List<String> = emptyList(),
+    private val timeoutMs: Long? = null,
 ) {
     private val fingerprinter: Fingerprinter = FingerprinterFactory.create(context)
 
@@ -43,10 +48,28 @@ internal class SimpleService(
      * The generated [SimpleResult.Success.requestId] matches the `requestId` embedded in
      * the payload; the caller uses it as the root `fp_request_id` when the PRO collector is absent.
      *
+     * When [timeoutMs] is configured, collection is bounded by it and a timeout is surfaced as
+     * [SimpleResult.Failure] so a slow device cannot hold up the publish of the other collectors.
+     *
      * @return SimpleResult containing the payload on success, or a message on failure.
      */
     suspend fun publishData(): SimpleResult =
         try {
+            collect()
+                ?: SimpleResult.Failure(
+                    "Timed out collecting simple device signals after ${timeoutMs}ms",
+                )
+        } catch (e: Throwable) {
+            SimpleResult.Failure(e.message ?: "Unknown error")
+        }
+
+    /**
+     * Gathers the device id and signals and assembles the sealed payload, honouring [timeoutMs]
+     * when the backend supplied a positive value. Returns null only when that timeout elapses
+     * before collection completes.
+     */
+    private suspend fun collect(): SimpleResult.Success? {
+        val gather: suspend () -> SimpleResult.Success = {
             val deviceId = awaitDeviceId()
 
             // getFingerprintingSignalsProvider / getSignalsMatching are @WorkerThread (blocking),
@@ -70,14 +93,21 @@ internal class SimpleService(
                 requestId = requestId,
                 sealedResult = sealedResult,
             )
-        } catch (e: Throwable) {
-            SimpleResult.Failure(e.message ?: "Unknown error")
         }
 
+        return if (timeoutMs != null && timeoutMs > 0) {
+            withTimeoutOrNull(timeoutMs) { gather() }
+        } else {
+            gather()
+        }
+    }
+
     private suspend fun awaitDeviceId(): String =
-        suspendCoroutine { continuation ->
+        suspendCancellableCoroutine { continuation ->
             fingerprinter.getDeviceId(version = Fingerprinter.Version.V_5) { result ->
-                continuation.resume(result.deviceId)
+                if (continuation.isActive) {
+                    continuation.resume(result.deviceId)
+                }
             }
         }
 }
