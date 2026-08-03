@@ -311,7 +311,7 @@ internal class RiskInternal(
                         error =
                         RiskLogError(
                             reason = "persistFingerprintData",
-                            message = "Unexpected  error",
+                            message = "Unexpected error",
                             type = "Device Data Service Error",
                             status = null
                         ),

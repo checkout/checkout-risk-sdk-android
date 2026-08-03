@@ -159,8 +159,8 @@ internal data class PersistFingerprintDataRequest(
  *
  * For the PRO collector the raw identifier travels in the root `fp_request_id`, so
  * [sealedResult] is null. For the open-source `simple` collector the collected
- * device data (device id plus raw signals) is JSON-serialised and base64-encoded into
- * [sealedResult].
+ * device data (the device ids plus the fingerprint hash) is JSON-serialised and base64-encoded
+ * into [sealedResult].
  */
 internal data class CollectorData(
     @SerializedName("collector")

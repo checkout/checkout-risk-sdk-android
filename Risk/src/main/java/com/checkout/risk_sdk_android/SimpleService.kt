@@ -2,12 +2,10 @@ package com.checkout.risk
 
 import android.content.Context
 import android.util.Base64
+import com.fingerprintjs.android.fingerprint.DeviceIdResult
 import com.fingerprintjs.android.fingerprint.Fingerprinter
 import com.fingerprintjs.android.fingerprint.FingerprinterFactory
-import com.fingerprintjs.android.fingerprint.signal_providers.StabilityLevel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 import kotlin.coroutines.resume
@@ -23,8 +21,8 @@ import kotlin.coroutines.resume
  *
  * @param context The Android context.
  * @param dropFieldPaths Dot-notation paths into the `device` data that the `configurations`
- * endpoint asked to drop before encoding (e.g. "canvas.value.geometry"). Paths that do not
- * resolve against the collected data are ignored.
+ * endpoint asked to drop before encoding (e.g. "androidId"). Paths that do not resolve against
+ * the collected data are ignored.
  * @param timeoutMs Optional collection budget in milliseconds, supplied by the `configurations`
  * endpoint. When set (and positive), collection that overruns it is abandoned and reported as a
  * failure rather than blocking `publishData`. Null means collect with no time limit.
@@ -39,11 +37,11 @@ internal class SimpleService(
     /**
      * Collects the open-source device data asynchronously.
      *
-     * The raw device signals (manufacturer, model, RAM, sensors, locale, …) are gathered
-     * alongside the computed device id and assembled into a `device` object, mirroring the
-     * `simple` collector in the JS SDK. That payload is JSON-serialised and base64-encoded
-     * into [SimpleResult.Success.sealedResult] so it can travel in the `sealed_result`
-     * field of the `fingerprint/v2` collectors payload.
+     * The device ids computed by the SDK ([DeviceIdResult]) and the device fingerprint hash are
+     * assembled into a `device` object and JSON-serialised (with explicit key names, so no
+     * reflection is involved and R8/ProGuard in a consumer app cannot rename the keys). That
+     * payload is base64-encoded into [SimpleResult.Success.sealedResult] so it can travel in the
+     * `sealed_result` field of the `fingerprint/v2` collectors payload.
      *
      * The generated [SimpleResult.Success.requestId] matches the `requestId` embedded in
      * the payload; the caller uses it as the root `fp_request_id` when the PRO collector is absent.
@@ -57,39 +55,30 @@ internal class SimpleService(
         try {
             collect()
                 ?: SimpleResult.Failure(
-                    "Timed out collecting simple device signals after ${timeoutMs}ms",
+                    "Timed out collecting simple device data after ${timeoutMs}ms",
                 )
         } catch (e: Throwable) {
             SimpleResult.Failure(e.message ?: "Unknown error")
         }
 
     /**
-     * Gathers the device id and signals and assembles the sealed payload, honouring [timeoutMs]
-     * when the backend supplied a positive value. Returns null only when that timeout elapses
-     * before collection completes.
+     * Gathers the device ids and fingerprint hash and assembles the sealed payload, honouring
+     * [timeoutMs] when the backend supplied a positive value. Returns null only when that timeout
+     * elapses before collection completes.
      */
     private suspend fun collect(): SimpleResult.Success? {
         val gather: suspend () -> SimpleResult.Success = {
-            val deviceId = awaitDeviceId()
-
-            // getFingerprintingSignalsProvider / getSignalsMatching are @WorkerThread (blocking),
-            // so gather the raw signals off the main thread.
-            val signals =
-                withContext(Dispatchers.IO) {
-                    fingerprinter
-                        .getFingerprintingSignalsProvider()
-                        ?.getSignalsMatching(Fingerprinter.Version.V_5, StabilityLevel.OPTIMAL)
-                        ?: emptyList()
-                }
+            val deviceIdResult = awaitDeviceId()
+            val fingerprint = awaitFingerprint()
 
             val requestId = UUID.randomUUID().toString()
             val payloadJson =
-                SimpleCollectorPayload.build(deviceId, requestId, signals, dropFieldPaths)
+                SimpleCollectorPayload.build(deviceIdResult, fingerprint, requestId, dropFieldPaths)
             val sealedResult =
                 Base64.encodeToString(payloadJson.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
 
             SimpleResult.Success(
-                deviceId = deviceId,
+                deviceId = deviceIdResult.deviceId,
                 requestId = requestId,
                 sealedResult = sealedResult,
             )
@@ -102,11 +91,20 @@ internal class SimpleService(
         }
     }
 
-    private suspend fun awaitDeviceId(): String =
+    private suspend fun awaitDeviceId(): DeviceIdResult =
         suspendCancellableCoroutine { continuation ->
             fingerprinter.getDeviceId(version = Fingerprinter.Version.V_5) { result ->
                 if (continuation.isActive) {
-                    continuation.resume(result.deviceId)
+                    continuation.resume(result)
+                }
+            }
+        }
+
+    private suspend fun awaitFingerprint(): String =
+        suspendCancellableCoroutine { continuation ->
+            fingerprinter.getFingerprint(version = Fingerprinter.Version.V_5) { fingerprint ->
+                if (continuation.isActive) {
+                    continuation.resume(fingerprint)
                 }
             }
         }

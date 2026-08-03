@@ -1,55 +1,54 @@
 package com.checkout.risk
 
-import com.fingerprintjs.android.fingerprint.fingerprinting_signals.FingerprintingSignal
+import com.fingerprintjs.android.fingerprint.DeviceIdResult
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 
 /**
- * Pure (Android-free) assembly of the `simple` collector payload, kept
- * separate from [SimpleService] so the serialisation and drop-field logic can be unit
- * tested without a device. The service layer owns the Android-only concerns (running the
- * fingerprinter and base64-encoding the result).
+ * Pure (Android-free) assembly of the `simple` collector payload, kept separate from
+ * [SimpleService] so the serialisation and drop-field logic can be unit tested without a device.
+ * The service layer owns the Android-only concerns (running the fingerprinter and base64-encoding
+ * the result).
  */
 internal object SimpleCollectorPayload {
     private val gson = Gson()
 
     /**
      * Builds the JSON payload (pre-base64) for the collector:
-     * `{ "requestId": <id>, "device": { "visitor_id": <id>, <signal>: <value>, … } }`,
+     * `{ "requestId": <id>, "device": { "visitor_id": <id>, "gsfId": …, "mediaDrmId": … }, "fingerprint": <hash> }`,
      * with every [dropFieldPaths] entry removed from the `device` object.
      *
-     * @param deviceId The on-device computed id, sent as `device.visitor_id`.
+     * The `device` object is assembled with explicit, literal key names (not derived from the SDK
+     * types by reflection), so R8/ProGuard in a consumer app cannot rename the keys.
+     *
+     * @param deviceIdResult The ids computed on-device; [DeviceIdResult.deviceId] is sent as
+     * `device.visitor_id`.
+     * @param fingerprint The device fingerprint hash computed by the SDK.
      * @param requestId The client-generated request id, echoed at the payload root.
-     * @param signals The raw device signals gathered from fingerprintjs-android.
      * @param dropFieldPaths Dot-notation paths into `device` to remove before encoding.
      */
     fun build(
-        deviceId: String,
+        deviceIdResult: DeviceIdResult,
+        fingerprint: String,
         requestId: String,
-        signals: List<FingerprintingSignal<*>>,
         dropFieldPaths: List<String>,
     ): String {
-        val device = linkedMapOf<String, String>("visitor_id" to deviceId)
-        signals.forEach { signal -> device[deviceKey(signal)] = signal.getHashableString() }
-
-        val deviceJson = gson.toJsonTree(device).asJsonObject
-        dropFieldPaths.forEach { path -> dropPath(deviceJson, path) }
+        val device =
+            JsonObject().apply {
+                addProperty("visitor_id", deviceIdResult.deviceId)
+                addProperty("gsfId", deviceIdResult.gsfId)
+                addProperty("androidId", deviceIdResult.androidId)
+                addProperty("mediaDrmId", deviceIdResult.mediaDrmId)
+            }
+        dropFieldPaths.forEach { path -> dropPath(device, path) }
 
         val payload =
             JsonObject().apply {
                 addProperty("requestId", requestId)
-                add("device", deviceJson)
+                add("device", device)
+                addProperty("fingerprint", fingerprint)
             }
         return gson.toJson(payload)
-    }
-
-    /**
-     * Derives a stable, readable key for a signal from its class name, e.g.
-     * `ManufacturerNameSignal` -> `manufacturerName`.
-     */
-    fun deviceKey(signal: FingerprintingSignal<*>): String {
-        val name = signal::class.simpleName ?: return "unknown"
-        return name.removeSuffix("Signal").replaceFirstChar { it.lowercase() }
     }
 
     /**

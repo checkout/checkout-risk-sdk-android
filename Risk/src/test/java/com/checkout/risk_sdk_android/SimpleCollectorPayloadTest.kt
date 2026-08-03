@@ -1,19 +1,18 @@
 package com.checkout.risk
 
-import com.fingerprintjs.android.fingerprint.fingerprinting_signals.ManufacturerNameSignal
-import com.fingerprintjs.android.fingerprint.fingerprinting_signals.ModelNameSignal
-import com.fingerprintjs.android.fingerprint.fingerprinting_signals.TotalRamSignal
+import com.fingerprintjs.android.fingerprint.DeviceIdResult
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.junit.Assert
 import org.junit.Test
 
 class SimpleCollectorPayloadTest {
-    private val signals =
-        listOf(
-            ManufacturerNameSignal("Google"),
-            ModelNameSignal("Pixel 7"),
-            TotalRamSignal(8_000_000_000L),
+    private val deviceIdResult =
+        DeviceIdResult(
+            deviceId = "device-id-123",
+            gsfId = "gsf-456",
+            androidId = "android-789",
+            mediaDrmId = "drm-abc",
         )
 
     private fun buildDevice(
@@ -22,9 +21,9 @@ class SimpleCollectorPayloadTest {
         JsonParser
             .parseString(
                 SimpleCollectorPayload.build(
-                    deviceId = "device-id-123",
+                    deviceIdResult = deviceIdResult,
+                    fingerprint = "fp-hash-xyz",
                     requestId = "req-abc",
-                    signals = signals,
                     dropFieldPaths = dropFieldPaths,
                 ),
             ).asJsonObject
@@ -38,28 +37,26 @@ class SimpleCollectorPayloadTest {
     }
 
     @Test
-    fun `build() includes the device id as visitor_id`() {
-        val device = buildDevice().getAsJsonObject("device")
+    fun `build() maps the device ids under device and the fingerprint at the root`() {
+        val payload = buildDevice()
+        val device = payload.getAsJsonObject("device")
 
         Assert.assertEquals("device-id-123", device.get("visitor_id").asString)
-    }
-
-    @Test
-    fun `build() maps each signal to a camelCase key and its hashable value`() {
-        val device = buildDevice().getAsJsonObject("device")
-
-        Assert.assertEquals("Google", device.get("manufacturerName").asString)
-        Assert.assertEquals("Pixel 7", device.get("modelName").asString)
-        Assert.assertEquals("8000000000", device.get("totalRam").asString)
+        Assert.assertEquals("gsf-456", device.get("gsfId").asString)
+        Assert.assertEquals("android-789", device.get("androidId").asString)
+        Assert.assertEquals("drm-abc", device.get("mediaDrmId").asString)
+        // The fingerprint hash is a sibling of `device`, not nested inside it.
+        Assert.assertEquals("fp-hash-xyz", payload.get("fingerprint").asString)
+        Assert.assertFalse(device.has("fingerprint"))
     }
 
     @Test
     fun `build() drops a top-level device field named in dropFieldPaths`() {
-        val device = buildDevice(dropFieldPaths = listOf("modelName")).getAsJsonObject("device")
+        val device = buildDevice(dropFieldPaths = listOf("androidId")).getAsJsonObject("device")
 
-        Assert.assertFalse(device.has("modelName"))
+        Assert.assertFalse(device.has("androidId"))
         // Other fields are untouched.
-        Assert.assertTrue(device.has("manufacturerName"))
+        Assert.assertTrue(device.has("gsfId"))
         Assert.assertEquals("device-id-123", device.get("visitor_id").asString)
     }
 
@@ -67,11 +64,11 @@ class SimpleCollectorPayloadTest {
     fun `build() ignores drop paths that do not resolve`() {
         val device =
             buildDevice(
-                dropFieldPaths = listOf("doesNotExist", "manufacturerName.nested.path"),
+                dropFieldPaths = listOf("doesNotExist", "gsfId.nested.path"),
             ).getAsJsonObject("device")
 
-        Assert.assertTrue(device.has("manufacturerName"))
-        Assert.assertEquals("Google", device.get("manufacturerName").asString)
+        Assert.assertTrue(device.has("gsfId"))
+        Assert.assertEquals("gsf-456", device.get("gsfId").asString)
     }
 
     @Test
@@ -86,28 +83,19 @@ class SimpleCollectorPayloadTest {
 
         // The drop_field_paths the `configurations` endpoint would return for this collector:
         // one path that resolves against the device data, and one that does not.
-        val dropFieldPaths = listOf("procCpuInfoV2", "canvas.value.text")
+        val dropFieldPaths = listOf("mediaDrmId", "canvas.value.text")
         dropFieldPaths.forEach { path -> SimpleCollectorPayload.dropPath(device, path) }
 
         // The resolving path is removed.
-        Assert.assertFalse(device.has("procCpuInfoV2"))
+        Assert.assertFalse(device.has("mediaDrmId"))
         // The non-resolving path is a no-op and drops nothing else.
         Assert.assertTrue(device.has("visitor_id"))
-        Assert.assertTrue(device.has("manufacturerName"))
-        Assert.assertTrue(device.has("modelName"))
-        Assert.assertTrue(device.has("totalRam"))
-        Assert.assertTrue(device.has("batteryHealth"))
+        Assert.assertTrue(device.has("gsfId"))
+        Assert.assertTrue(device.has("androidId"))
         Assert.assertEquals("a1b2c3d4e5f6a7b8", device.get("visitor_id").asString)
-        Assert.assertEquals("Google", device.get("manufacturerName").asString)
         Assert.assertEquals("req-example-001", payload.get("requestId").asString)
-    }
-
-    @Test
-    fun `deviceKey() strips the Signal suffix and lowercases the first letter`() {
-        Assert.assertEquals(
-            "manufacturerName",
-            SimpleCollectorPayload.deviceKey(ManufacturerNameSignal("x")),
-        )
+        // The fingerprint hash sits alongside `device` at the payload root.
+        Assert.assertEquals("e3b0c44298fc1c149afbf4c8996fb924", payload.get("fingerprint").asString)
     }
 
     @Test
@@ -127,11 +115,11 @@ class SimpleCollectorPayloadTest {
 
     @Test
     fun `dropPath() is a no-op when an intermediate segment is not an object`() {
-        val root = JsonParser.parseString("""{ "manufacturerName": "Google" }""").asJsonObject
+        val root = JsonParser.parseString("""{ "gsfId": "gsf-456" }""").asJsonObject
 
-        SimpleCollectorPayload.dropPath(root, "manufacturerName.value")
+        SimpleCollectorPayload.dropPath(root, "gsfId.value")
 
-        Assert.assertTrue(root.has("manufacturerName"))
-        Assert.assertEquals("Google", root.get("manufacturerName").asString)
+        Assert.assertTrue(root.has("gsfId"))
+        Assert.assertEquals("gsf-456", root.get("gsfId").asString)
     }
 }
