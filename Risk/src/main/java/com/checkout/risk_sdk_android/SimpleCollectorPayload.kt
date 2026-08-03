@@ -15,7 +15,7 @@ internal object SimpleCollectorPayload {
 
     /**
      * Builds the JSON payload (pre-base64) for the collector:
-     * `{ "requestId": <id>, "device": { "visitor_id": <id>, "gsfId": …, "mediaDrmId": … }, "fingerprint": <hash> }`,
+     * `{ "requestId": <id>, "device": { "visitor_id": <id>, "gsfId": …, <signal>: …, }, "fingerprint": <hash> }`,
      * with every [dropFieldPaths] entry removed from the `device` object.
      *
      * The `device` object is assembled with explicit, literal key names (not derived from the SDK
@@ -24,12 +24,15 @@ internal object SimpleCollectorPayload {
      * @param deviceIdResult The ids computed on-device; [DeviceIdResult.deviceId] is sent as
      * `device.visitor_id`.
      * @param fingerprint The device fingerprint hash computed by the SDK.
+     * @param deviceSignals The selected device signals to include under `device`, keyed by the
+     * literal field name to send (insertion order is preserved in the output).
      * @param requestId The client-generated request id, echoed at the payload root.
      * @param dropFieldPaths Dot-notation paths into `device` to remove before encoding.
      */
     fun build(
         deviceIdResult: DeviceIdResult,
         fingerprint: String,
+        deviceSignals: Map<String, String>,
         requestId: String,
         dropFieldPaths: List<String>,
     ): String {
@@ -39,6 +42,7 @@ internal object SimpleCollectorPayload {
                 addProperty("gsfId", deviceIdResult.gsfId)
                 addProperty("androidId", deviceIdResult.androidId)
                 addProperty("mediaDrmId", deviceIdResult.mediaDrmId)
+                deviceSignals.forEach { (key, value) -> addProperty(key, value) }
             }
         dropFieldPaths.forEach { path -> dropPath(device, path) }
 

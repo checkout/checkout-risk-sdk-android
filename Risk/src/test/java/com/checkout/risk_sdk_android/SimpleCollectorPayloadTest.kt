@@ -15,6 +15,22 @@ class SimpleCollectorPayloadTest {
             mediaDrmId = "drm-abc",
         )
 
+    // Mirrors the signal set gathered by SimpleService.collectDeviceSignals().
+    private val deviceSignals =
+        linkedMapOf(
+            "manufacturerName" to "Google",
+            "modelName" to "Pixel 7",
+            "totalRam" to "8000000000",
+            "androidVersion" to "14",
+            "kernelName" to "6.1.25-android14",
+            "batteryHealth" to "GOOD",
+            "dateFormat" to "dd/MM/yyyy",
+            "httpProxy" to ":0",
+            "dataRoaming" to "0",
+            "sdkVersion" to "34",
+            "timezone" to "Europe/London",
+        )
+
     private fun buildDevice(
         dropFieldPaths: List<String> = emptyList(),
     ): JsonObject =
@@ -23,6 +39,7 @@ class SimpleCollectorPayloadTest {
                 SimpleCollectorPayload.build(
                     deviceIdResult = deviceIdResult,
                     fingerprint = "fp-hash-xyz",
+                    deviceSignals = deviceSignals,
                     requestId = "req-abc",
                     dropFieldPaths = dropFieldPaths,
                 ),
@@ -48,6 +65,15 @@ class SimpleCollectorPayloadTest {
         // The fingerprint hash is a sibling of `device`, not nested inside it.
         Assert.assertEquals("fp-hash-xyz", payload.get("fingerprint").asString)
         Assert.assertFalse(device.has("fingerprint"))
+    }
+
+    @Test
+    fun `build() includes every selected device signal under device`() {
+        val device = buildDevice().getAsJsonObject("device")
+
+        deviceSignals.forEach { (key, value) ->
+            Assert.assertEquals(value, device.get(key).asString)
+        }
     }
 
     @Test

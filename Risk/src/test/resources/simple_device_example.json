@@ -4,7 +4,18 @@
     "visitor_id": "a1b2c3d4e5f6a7b8",
     "gsfId": "3f9a2b1c8d7e6f50",
     "androidId": "9774d56d682e549c",
-    "mediaDrmId": "0102030405060708"
+    "mediaDrmId": "0102030405060708",
+    "manufacturerName": "Google",
+    "modelName": "Pixel 7",
+    "totalRam": "8000000000",
+    "androidVersion": "14",
+    "kernelName": "6.1.25-android14",
+    "batteryHealth": "GOOD",
+    "dateFormat": "dd/MM/yyyy",
+    "httpProxy": ":0",
+    "dataRoaming": "0",
+    "sdkVersion": "34",
+    "timezone": "Europe/London"
   },
   "fingerprint": "e3b0c44298fc1c149afbf4c8996fb924"
 }
