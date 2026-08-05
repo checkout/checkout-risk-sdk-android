@@ -5,6 +5,7 @@ import android.util.Base64
 import com.fingerprintjs.android.fingerprint.DeviceIdResult
 import com.fingerprintjs.android.fingerprint.Fingerprinter
 import com.fingerprintjs.android.fingerprint.FingerprinterFactory
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -25,14 +26,15 @@ import kotlin.coroutines.resume
  * @param dropFieldPaths Dot-notation paths into the `device` data that the `configurations`
  * endpoint asked to drop before encoding (e.g. "androidId"). Paths that do not resolve against
  * the collected data are ignored.
- * @param timeoutMs Optional collection budget in milliseconds, supplied by the `configurations`
+ * @param timeoutMs Collection budget in milliseconds, supplied by the `configurations`
  * endpoint. When set (and positive), collection that overruns it is abandoned and reported as a
- * failure rather than blocking `publishData`. Null means collect with no time limit.
+ * failure rather than blocking `publishData`. Defaults to [DEFAULT_TIMEOUT_MS]; pass null
+ * explicitly to collect with no time limit.
  */
 internal class SimpleService(
     context: Context,
     private val dropFieldPaths: List<String> = emptyList(),
-    private val timeoutMs: Long? = null,
+    private val timeoutMs: Long? = DEFAULT_TIMEOUT_MS,
 ) {
     private val fingerprinter: Fingerprinter = FingerprinterFactory.create(context)
 
@@ -51,6 +53,11 @@ internal class SimpleService(
      * When [timeoutMs] is configured, collection is bounded by it and a timeout is surfaced as
      * [SimpleResult.Failure] so a slow device cannot hold up the publish of the other collectors.
      *
+     * Cancellation by the caller is not a collection failure, so [CancellationException] is
+     * rethrown rather than reported as [SimpleResult.Failure] — otherwise a cancelled publish
+     * would be logged as a genuine `PUBLISH_FAILURE`. Our own [timeoutMs] expiry does not reach
+     * here; `withTimeoutOrNull` absorbs it and yields the timeout failure above.
+     *
      * @return SimpleResult containing the payload on success, or a message on failure.
      */
     suspend fun publishData(): SimpleResult =
@@ -59,6 +66,8 @@ internal class SimpleService(
                 ?: SimpleResult.Failure(
                     "Timed out collecting simple device data after ${timeoutMs}ms",
                 )
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Throwable) {
             SimpleResult.Failure(e.message ?: "Unknown error")
         }
@@ -146,6 +155,11 @@ internal class SimpleService(
                 }
             }
         }
+
+    internal companion object {
+        /** Collection budget used when the `configurations` endpoint does not supply one. */
+        const val DEFAULT_TIMEOUT_MS = 1000L
+    }
 }
 
 internal sealed class SimpleResult {
