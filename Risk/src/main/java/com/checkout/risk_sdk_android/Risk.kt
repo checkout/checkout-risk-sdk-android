@@ -67,7 +67,9 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
                             SimpleService(
                                 applicationContext,
                                 dropFieldPaths = deviceDataConfig.data.simple?.dropFieldPaths ?: emptyList(),
-                                timeoutMs = deviceDataConfig.data.simple?.timeoutMs,
+                                timeoutMs =
+                                    deviceDataConfig.data.simple?.timeoutMs
+                                        ?: SimpleService.DEFAULT_TIMEOUT_MS,
                             )
                         } else {
                             null
