@@ -118,7 +118,7 @@ internal data class DeviceDataConfiguration(
     @SerializedName("data_collectors")
     val dataCollectors: List<String> = emptyList(),
     @SerializedName("public_key")
-    val publicKey: String?,
+    val publicKey: String? = null,
     @SerializedName("simple")
     val simple: SimpleCollectorConfig? = null,
 )
