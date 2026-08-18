@@ -26,8 +26,7 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
             when (val deviceDataConfig = deviceDataService.getConfiguration()) {
                 is NetworkResult.Success -> {
                     val blockTime = elapsedMs(startBlockTime)
-
-                    val dataCollectors = deviceDataConfig.data.dataCollectors
+                    val dataCollectors = deviceDataConfig.data.dataCollectorsOrEmpty
                     val publicKey = deviceDataConfig.data.publicKey
 
                     // A collector is enabled when its name is present in `data_collectors`.
@@ -66,10 +65,8 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
                         if (simpleEnabled) {
                             SimpleService(
                                 applicationContext,
-                                dropFieldPaths = deviceDataConfig.data.simple?.dropFieldPaths ?: emptyList(),
-                                timeoutMs =
-                                    deviceDataConfig.data.simple?.timeoutMs
-                                        ?: SimpleService.DEFAULT_TIMEOUT_MS,
+                                dropFieldPaths = deviceDataConfig.data.simple?.dropFieldPathsOrEmpty ?: emptyList(),
+                                timeoutMs = deviceDataConfig.data.simple?.timeoutMs,
                             )
                         } else {
                             null
@@ -255,6 +252,33 @@ internal class RiskInternal(
             ) {
                 is NetworkResult.Success -> {
                     val deviceDataPersistTime = elapsedMs(startDeviceDataPersistTime)
+
+                    // defensive code
+                    // A 2xx with a missing or blank device_session_id (partial write, proxy
+                    // rewriting the body, a new error shape) must not be reported as Success
+                    val deviceSessionId = persistResult.data.deviceSessionId
+                    if (deviceSessionId.isNullOrBlank()) {
+                        loggerService.log(
+                            blockTime = blockTime,
+                            fpLoadTime = fpLoadTime,
+                            fpPublishTime = fpPublishTime,
+                            deviceDataPersistTime = deviceDataPersistTime,
+                            riskEvent = RiskEvent.PUBLISH_FAILURE,
+                            requestID = requestId,
+                            deviceCollectorProviders = providers,
+                            error =
+                                RiskLogError(
+                                    reason = "persistFingerprintData",
+                                    message =
+                                        "Response was successful but device_session_id was " +
+                                            "missing or blank",
+                                    status = null,
+                                    type = "Device Data Service Error",
+                                ),
+                        )
+                        return@coroutineScope PublishDataResult.PublishFailure
+                    }
+
                     loggerService.log(
                         blockTime = blockTime,
                         fpLoadTime = fpLoadTime,
@@ -262,10 +286,10 @@ internal class RiskInternal(
                         deviceDataPersistTime = deviceDataPersistTime,
                         riskEvent = RiskEvent.PUBLISHED,
                         requestID = requestId,
-                        deviceSessionID = persistResult.data.deviceSessionId,
+                        deviceSessionID = deviceSessionId,
                         deviceCollectorProviders = providers,
                     )
-                    PublishDataResult.Success(persistResult.data.deviceSessionId)
+                    PublishDataResult.Success(deviceSessionId)
                 }
 
                 is NetworkResult.Error -> {
@@ -318,7 +342,8 @@ internal class RiskInternal(
                             status = null
                         ),
                     )
-                    PublishDataResult.PublishFailure}
+                    PublishDataResult.PublishFailure
+                }
             }
         }
 

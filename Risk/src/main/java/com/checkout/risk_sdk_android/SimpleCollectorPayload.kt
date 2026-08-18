@@ -27,7 +27,14 @@ internal object SimpleCollectorPayload {
      * @param deviceSignals The selected device signals to include under `device`, keyed by the
      * literal field name to send (insertion order is preserved in the output).
      * @param requestId The client-generated request id, echoed at the payload root.
-     * @param dropFieldPaths Dot-notation paths into `device` to remove before encoding.
+     * @param dropFieldPaths Paths into `device` to remove before encoding. Paths are rooted **at
+     * the `device` object**: the Android ID is "androidId", NOT "device.androidId". Dot notation
+     * addresses nested objects within `device`.
+     * @param onUnresolvedDropPath Invoked once per requested path that did not resolve to an
+     * existing field, so a drop instruction the SDK could not honour is reportable instead of
+     * silent. `drop_field_paths` is how the backend remotely stops collecting a persistent device
+     * identifier, so a silently ignored path means a privacy instruction has no effect and nothing
+     * says so.
      */
     fun build(
         deviceIdResult: DeviceIdResult,
@@ -35,6 +42,7 @@ internal object SimpleCollectorPayload {
         deviceSignals: Map<String, String>,
         requestId: String,
         dropFieldPaths: List<String>,
+        onUnresolvedDropPath: (String) -> Unit = {},
     ): String {
         val device =
             JsonObject().apply {
@@ -44,7 +52,11 @@ internal object SimpleCollectorPayload {
                 addProperty("mediaDrmId", deviceIdResult.mediaDrmId)
                 deviceSignals.forEach { (key, value) -> addProperty(key, value) }
             }
-        dropFieldPaths.forEach { path -> dropPath(device, path) }
+        dropFieldPaths.forEach { path ->
+            if (!dropPath(device, path)) {
+                onUnresolvedDropPath(path)
+            }
+        }
 
         val payload =
             JsonObject().apply {
@@ -56,21 +68,30 @@ internal object SimpleCollectorPayload {
     }
 
     /**
-     * Removes the field at [path] (dot-notation) from [root], walking nested objects. A path
-     * that does not fully resolve to an existing field is a no-op, so stale or platform-specific
-     * paths returned by the backend are simply ignored.
+     * Removes the field at [path] (dot-notation) from [root], walking nested objects.
+     *
+     * [root] is the `device` object, so paths are rooted there: "androidId", not
+     * "device.androidId".
+     *
+     * @return true when a field was actually removed; false when the path did not resolve — an
+     * intermediate segment was missing or not an object, the leaf was absent, or the path was
+     * blank. Callers must treat false as "the requested drop did not happen"; stale or
+     * platform-specific paths from the backend (a web/iOS field name, or a path rooted at the
+     * payload root) all land here.
      */
     fun dropPath(
         root: JsonObject,
         path: String,
-    ) {
+    ): Boolean {
+        if (path.isBlank()) return false
         val segments = path.split('.')
+        if (segments.any { it.isEmpty() }) return false
         var parent: JsonObject = root
         for (i in 0 until segments.size - 1) {
             val child = parent.get(segments[i])
-            if (child == null || !child.isJsonObject) return
+            if (child == null || !child.isJsonObject) return false
             parent = child.asJsonObject
         }
-        parent.remove(segments.last())
+        return parent.remove(segments.last()) != null
     }
 }

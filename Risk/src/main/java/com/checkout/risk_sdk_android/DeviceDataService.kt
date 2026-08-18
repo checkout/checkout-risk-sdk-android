@@ -116,12 +116,15 @@ private sealed interface DeviceDataApi {
  */
 internal data class DeviceDataConfiguration(
     @SerializedName("data_collectors")
-    val dataCollectors: List<String> = emptyList(),
+    val dataCollectors: List<String>? = emptyList(),
     @SerializedName("public_key")
     val publicKey: String? = null,
     @SerializedName("simple")
     val simple: SimpleCollectorConfig? = null,
-)
+) {
+    val dataCollectorsOrEmpty: List<String>
+        get() = dataCollectors.orEmpty()
+}
 
 /**
  * Per-collector configuration for the `simple` collector.
@@ -132,14 +135,17 @@ internal data class DeviceDataConfiguration(
  */
 internal data class SimpleCollectorConfig(
     @SerializedName("drop_field_paths")
-    val dropFieldPaths: List<String> = emptyList(),
+    val dropFieldPaths: List<String>? = emptyList(),
     @SerializedName("timeout_ms")
     val timeoutMs: Long? = null,
-)
+) {
+    val dropFieldPathsOrEmpty: List<String>
+        get() = dropFieldPaths.orEmpty()
+}
 
 internal data class PersistFingerprintDataResponse(
     @SerializedName("device_session_id")
-    val deviceSessionId: String,
+    val deviceSessionId: String? = null,
 )
 
 internal data class PersistFingerprintDataRequest(

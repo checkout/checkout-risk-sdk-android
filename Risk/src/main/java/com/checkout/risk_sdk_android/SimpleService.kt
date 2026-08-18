@@ -2,9 +2,11 @@ package com.checkout.risk
 
 import android.content.Context
 import android.util.Base64
+import android.util.Log
 import com.fingerprintjs.android.fingerprint.DeviceIdResult
 import com.fingerprintjs.android.fingerprint.Fingerprinter
 import com.fingerprintjs.android.fingerprint.FingerprinterFactory
+import com.fingerprintjs.android.fingerprint.signal_providers.StabilityLevel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -23,20 +25,24 @@ import kotlin.coroutines.resume
  * a second, free device id alongside PRO for downstream comparison.
  *
  * @param context The Android context.
- * @param dropFieldPaths Dot-notation paths into the `device` data that the `configurations`
- * endpoint asked to drop before encoding (e.g. "androidId"). Paths that do not resolve against
- * the collected data are ignored.
+ * @param dropFieldPaths Paths the `configurations` endpoint asked to drop before encoding.
+ * Paths are rooted **at the `device` object**, not at the payload root, so the path for the
+ * Android ID is "androidId" and NOT "device.androidId". Dot notation addresses nested objects
+ * within `device`. A path that does not resolve is not silently discarded — see
+ * [SimpleCollectorPayload.build].
  * @param timeoutMs Collection budget in milliseconds, supplied by the `configurations`
- * endpoint. When set (and positive), collection that overruns it is abandoned and reported as a
- * failure rather than blocking `publishData`. Defaults to [DEFAULT_TIMEOUT_MS]; pass null
- * explicitly to collect with no time limit.
+ * endpoint. Collection that overruns it is abandoned and reported as a failure rather than
+ * blocking `publishData`. A null or non-positive value means "not configured" and falls back to
+ * [DEFAULT_TIMEOUT_MS]; there is deliberately no way to express "no limit", because this runs on
+ * the payment path.
  */
 internal class SimpleService(
     context: Context,
     private val dropFieldPaths: List<String> = emptyList(),
-    private val timeoutMs: Long? = DEFAULT_TIMEOUT_MS,
+    timeoutMs: Long? = DEFAULT_TIMEOUT_MS,
 ) {
     private val fingerprinter: Fingerprinter = FingerprinterFactory.create(context)
+    private val effectiveTimeoutMs: Long = timeoutMs?.takeIf { it > 0 } ?: DEFAULT_TIMEOUT_MS
 
     /**
      * Collects the open-source device data asynchronously.
@@ -50,7 +56,7 @@ internal class SimpleService(
      * The generated [SimpleResult.Success.requestId] matches the `requestId` embedded in
      * the payload; the caller uses it as the root `fp_request_id` when the PRO collector is absent.
      *
-     * When [timeoutMs] is configured, collection is bounded by it and a timeout is surfaced as
+     * [timeoutMs] is always configured, collection is bounded by it and a timeout is surfaced as
      * [SimpleResult.Failure] so a slow device cannot hold up the publish of the other collectors.
      *
      * Cancellation by the caller is not a collection failure, so [CancellationException] is
@@ -64,7 +70,7 @@ internal class SimpleService(
         try {
             collect()
                 ?: SimpleResult.Failure(
-                    "Timed out collecting simple device data after ${timeoutMs}ms",
+                    "Timed out collecting simple device data after ${effectiveTimeoutMs}ms",
                 )
         } catch (e: CancellationException) {
             throw e
@@ -73,14 +79,23 @@ internal class SimpleService(
         }
 
     /**
-     * Gathers the device ids and fingerprint hash and assembles the sealed payload, honouring
-     * [timeoutMs] when the backend supplied a positive value. Returns null only when that timeout
-     * elapses before collection completes.
+     * Gathers the device ids and fingerprint hash and assembles the sealed payload, always
+     * bounded by [effectiveTimeoutMs]. Returns null only when that timeout elapses before
+     * collection completes.
      */
-    private suspend fun collect(): SimpleResult.Success? {
-        val gather: suspend () -> SimpleResult.Success = {
+    private suspend fun collect(): SimpleResult? =
+        withTimeoutOrNull(effectiveTimeoutMs) {
             val deviceIdResult = awaitDeviceId()
             val fingerprint = awaitFingerprint()
+
+            if (deviceIdResult.deviceId.isEmpty() || fingerprint.isEmpty()) {
+                return@withTimeoutOrNull SimpleResult.Failure(
+                    "Simple collector returned empty results (deviceId blank: " +
+                        "${deviceIdResult.deviceId.isEmpty()}, fingerprint blank: " +
+                        "${fingerprint.isEmpty()}); treating as a collection failure",
+                )
+            }
+
             val deviceSignals = collectDeviceSignals()
 
             val requestId = UUID.randomUUID().toString()
@@ -91,6 +106,14 @@ internal class SimpleService(
                     deviceSignals,
                     requestId,
                     dropFieldPaths,
+                    onUnresolvedDropPath = { path ->
+                        Log.w(
+                            LOG_TAG,
+                            "drop_field_paths entry did not resolve against the collected " +
+                                "device data and was ignored: '$path'. Paths are rooted at the " +
+                                "device object (use \"androidId\", not \"device.androidId\").",
+                        )
+                    },
                 )
             val sealedResult =
                 Base64.encodeToString(payloadJson.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
@@ -101,13 +124,6 @@ internal class SimpleService(
                 sealedResult = sealedResult,
             )
         }
-
-        return if (timeoutMs != null && timeoutMs > 0) {
-            withTimeoutOrNull(timeoutMs) { gather() }
-        } else {
-            gather()
-        }
-    }
 
     /**
      * Reads the specific device signals we send from the fingerprintjs provider, off the main
@@ -149,7 +165,10 @@ internal class SimpleService(
 
     private suspend fun awaitFingerprint(): String =
         suspendCancellableCoroutine { continuation ->
-            fingerprinter.getFingerprint(version = Fingerprinter.Version.V_5) { fingerprint ->
+            fingerprinter.getFingerprint(
+                version = Fingerprinter.Version.V_5,
+                stabilityLevel = StabilityLevel.OPTIMAL, // pinning to default behaviour to be explicit
+            ) { fingerprint ->
                 if (continuation.isActive) {
                     continuation.resume(fingerprint)
                 }
@@ -157,8 +176,8 @@ internal class SimpleService(
         }
 
     internal companion object {
-        /** Collection budget used when the `configurations` endpoint does not supply one. */
         const val DEFAULT_TIMEOUT_MS = 1000L
+        private const val LOG_TAG = "RiskSimpleService"
     }
 }
 
