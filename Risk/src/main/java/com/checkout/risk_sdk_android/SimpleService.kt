@@ -106,14 +106,6 @@ internal class SimpleService(
                     deviceSignals,
                     requestId,
                     dropFieldPaths,
-                    onUnresolvedDropPath = { path ->
-                        Log.w(
-                            LOG_TAG,
-                            "drop_field_paths entry did not resolve against the collected " +
-                                "device data and was ignored: '$path'. Paths are rooted at the " +
-                                "device object (use \"androidId\", not \"device.androidId\").",
-                        )
-                    },
                 )
             val sealedResult =
                 Base64.encodeToString(payloadJson.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)

@@ -30,11 +30,6 @@ internal object SimpleCollectorPayload {
      * @param dropFieldPaths Paths into `device` to remove before encoding. Paths are rooted **at
      * the `device` object**: the Android ID is "androidId", NOT "device.androidId". Dot notation
      * addresses nested objects within `device`.
-     * @param onUnresolvedDropPath Invoked once per requested path that did not resolve to an
-     * existing field, so a drop instruction the SDK could not honour is reportable instead of
-     * silent. `drop_field_paths` is how the backend remotely stops collecting a persistent device
-     * identifier, so a silently ignored path means a privacy instruction has no effect and nothing
-     * says so.
      */
     fun build(
         deviceIdResult: DeviceIdResult,
@@ -42,7 +37,6 @@ internal object SimpleCollectorPayload {
         deviceSignals: Map<String, String>,
         requestId: String,
         dropFieldPaths: List<String>,
-        onUnresolvedDropPath: (String) -> Unit = {},
     ): String {
         val device =
             JsonObject().apply {
@@ -52,11 +46,7 @@ internal object SimpleCollectorPayload {
                 addProperty("mediaDrmId", deviceIdResult.mediaDrmId)
                 deviceSignals.forEach { (key, value) -> addProperty(key, value) }
             }
-        dropFieldPaths.forEach { path ->
-            if (!dropPath(device, path)) {
-                onUnresolvedDropPath(path)
-            }
-        }
+        dropFieldPaths.forEach { path -> dropPath(device, path) }
 
         val payload =
             JsonObject().apply {
