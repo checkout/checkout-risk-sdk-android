@@ -55,20 +55,85 @@ class DeviceDataServiceTest {
         val deviceDataService = DeviceDataService(internalConfig)
 
         runTest {
-            deviceDataService.getConfiguration().let {
-                if (it is NetworkResult.Success) {
-                    Assert.assertEquals(true, it.data.fingerprintIntegration.enabled)
-                    Assert.assertEquals("pk_test_key", it.data.fingerprintIntegration.publicKey)
-                }
-            }
+            val result = deviceDataService.getConfiguration()
+            Assert.assertTrue("expected Success but got $result", result is NetworkResult.Success)
+            result as NetworkResult.Success
+            Assert.assertEquals(
+                listOf("fingerprint", "simple"),
+                result.data.dataCollectorsOrEmpty,
+            )
+            Assert.assertEquals("pk_test_key", result.data.publicKey)
         }
 
         val request = mockWebServer.takeRequest()
         Assert.assertEquals("GET", request.method)
         Assert.assertEquals(
-            "/collect/configuration",
+            "/collect/configurations",
             request.path.toString().split('?')[0],
         )
+    }
+
+    @Test
+    fun `getConfiguration() should parse the simple collector config`() {
+        val response =
+            MockResponse()
+                .setResponseCode(200)
+                .setBody(MockResponseFileReader("getConfiguration_simple_response_200.json").content)
+
+        mockWebServer.enqueue(response)
+
+        val internalConfig =
+            RiskSDKInternalConfigTestImpl(
+                merchantPublicKey = "pk_test_key",
+                environment = RiskEnvironment.QA,
+                deviceDataEndpoint = mockWebServer.url("/").toString(),
+                fingerprintEndpoint = mockWebServer.url("/").toString(),
+                integrationType = RiskIntegrationType.STANDALONE,
+                sourceType = SourceType.RISK_SDK,
+            )
+
+        val deviceDataService = DeviceDataService(internalConfig)
+
+        runTest {
+            val result = deviceDataService.getConfiguration()
+            Assert.assertTrue(result is NetworkResult.Success)
+
+            val config = (result as NetworkResult.Success).data
+            Assert.assertEquals(listOf("simple", "fingerprint"), config.dataCollectors)
+            Assert.assertEquals(
+                listOf("procCpuInfoV2", "canvas.value.text"),
+                config.simple?.dropFieldPaths,
+            )
+            Assert.assertEquals(1000L, config.simple?.timeoutMs)
+        }
+    }
+
+    @Test
+    fun `getConfiguration() leaves the simple config null when absent`() {
+        val response =
+            MockResponse()
+                .setResponseCode(200)
+                .setBody(MockResponseFileReader("getConfiguration_response_200.json").content)
+
+        mockWebServer.enqueue(response)
+
+        val internalConfig =
+            RiskSDKInternalConfigTestImpl(
+                merchantPublicKey = "pk_test_key",
+                environment = RiskEnvironment.QA,
+                deviceDataEndpoint = mockWebServer.url("/").toString(),
+                fingerprintEndpoint = mockWebServer.url("/").toString(),
+                integrationType = RiskIntegrationType.STANDALONE,
+                sourceType = SourceType.RISK_SDK,
+            )
+
+        val deviceDataService = DeviceDataService(internalConfig)
+
+        runTest {
+            val result = deviceDataService.getConfiguration()
+            Assert.assertTrue(result is NetworkResult.Success)
+            Assert.assertNull((result as NetworkResult.Success).data.simple)
+        }
     }
 
     @Test
@@ -92,11 +157,10 @@ class DeviceDataServiceTest {
         val deviceDataService = DeviceDataService(internalConfig)
 
         runTest {
-            deviceDataService.getConfiguration().let {
-                if (it is NetworkResult.Error) {
-                    Assert.assertEquals("Server Error", it.message)
-                }
-            }
+            val result = deviceDataService.getConfiguration()
+            Assert.assertTrue("expected Error but got $result", result is NetworkResult.Error)
+            result as NetworkResult.Error
+            Assert.assertEquals("Server Error", result.message)
         }
     }
 
@@ -121,32 +185,38 @@ class DeviceDataServiceTest {
 
         val deviceDataService = DeviceDataService(internalConfig)
 
+        val collectors =
+            listOf(
+                CollectorData(collector = "fingerprint", sealedResult = null),
+                CollectorData(collector = "simple", sealedResult = "c2VhbGVkX29z"),
+            )
+
         runTest {
-            deviceDataService.persistFingerprintData("fp_data", "card_token").let {
-                if (it is NetworkResult.Success) {
-                    Assert.assertEquals(
-                        PersistFingerprintDataResponse("1234567890"),
-                        it.data,
-                    )
-                }
-            }
+            val result = deviceDataService.persistFingerprintData("fp_data", "card_token", collectors)
+            Assert.assertTrue("expected Success but got $result", result is NetworkResult.Success)
+            result as NetworkResult.Success
+            Assert.assertEquals(
+                PersistFingerprintDataResponse("dsid_1234567890"),
+                result.data,
+            )
         }
 
         val request = mockWebServer.takeRequest()
 
         Assert.assertEquals("PUT", request.method)
         Assert.assertEquals(
-            "/collect/fingerprint?riskSdkVersion=2.3.0",
+            "/collect/fingerprint/v2?riskSdkVersion=${Constants.RISK_PACKAGE_VERSION}",
             request.path,
         )
 
         val expected =
             Gson().toJson(
-                object {
-                    val fp_request_id = "fp_data"
-                    val integration_type = "RiskAndroidStandalone"
-                    val card_token = "card_token"
-                },
+                PersistFingerprintDataRequest(
+                    fpRequestId = "fp_data",
+                    integrationType = "RiskAndroidStandalone",
+                    cardToken = "card_token",
+                    collectors = collectors,
+                ),
             )
 
         Assert.assertEquals(
@@ -176,11 +246,101 @@ class DeviceDataServiceTest {
         val deviceDataService = DeviceDataService(internalConfig)
 
         runTest {
-            deviceDataService.persistFingerprintData("fp_data", "card_token").let {
-                if (it is NetworkResult.Error) {
-                    Assert.assertEquals("Server Error", it.message)
-                }
-            }
+            val result =
+                deviceDataService.persistFingerprintData(
+                    "fp_data",
+                    "card_token",
+                    listOf(CollectorData(collector = "fingerprint", sealedResult = null)),
+                )
+            Assert.assertTrue("expected Error but got $result", result is NetworkResult.Error)
+            result as NetworkResult.Error
+            Assert.assertEquals("Server Error", result.message)
+        }
+    }
+
+    @Test
+    fun `getConfiguration() should tolerate an explicit null data_collectors`() {
+        val response =
+            MockResponse()
+                .setResponseCode(200)
+                .setBody("""{"data_collectors": null, "public_key": "pk_test_key"}""")
+        mockWebServer.enqueue(response)
+
+        val internalConfig =
+            RiskSDKInternalConfigTestImpl(
+                merchantPublicKey = "pk_test_key",
+                environment = RiskEnvironment.QA,
+                deviceDataEndpoint = mockWebServer.url("/").toString(),
+                fingerprintEndpoint = mockWebServer.url("/").toString(),
+                integrationType = RiskIntegrationType.STANDALONE,
+                sourceType = SourceType.RISK_SDK,
+            )
+        val deviceDataService = DeviceDataService(internalConfig)
+
+        runTest {
+            val result = deviceDataService.getConfiguration()
+            Assert.assertTrue("expected Success but got $result", result is NetworkResult.Success)
+            result as NetworkResult.Success
+            Assert.assertNull(result.data.dataCollectors)
+            Assert.assertEquals(emptyList<String>(), result.data.dataCollectorsOrEmpty)
+        }
+    }
+
+    @Test
+    fun `getConfiguration() should treat a non-positive timeout_ms as not configured`() {
+        val response =
+            MockResponse()
+                .setResponseCode(200)
+                .setBody(
+                    """{"data_collectors":["simple"],"simple":{"drop_field_paths":[],"timeout_ms":0}}""",
+                )
+        mockWebServer.enqueue(response)
+
+        val internalConfig =
+            RiskSDKInternalConfigTestImpl(
+                merchantPublicKey = "pk_test_key",
+                environment = RiskEnvironment.QA,
+                deviceDataEndpoint = mockWebServer.url("/").toString(),
+                fingerprintEndpoint = mockWebServer.url("/").toString(),
+                integrationType = RiskIntegrationType.STANDALONE,
+                sourceType = SourceType.RISK_SDK,
+            )
+        val deviceDataService = DeviceDataService(internalConfig)
+
+        runTest {
+            val result = deviceDataService.getConfiguration()
+            Assert.assertTrue("expected Success but got $result", result is NetworkResult.Success)
+            result as NetworkResult.Success
+            Assert.assertEquals(0L, result.data.simple?.timeoutMs)
+        }
+    }
+
+    @Test
+    fun `persistFpData() should surface a missing device_session_id as null rather than crashing`() {
+        val response = MockResponse().setResponseCode(200).setBody("{}")
+        mockWebServer.enqueue(response)
+
+        val internalConfig =
+            RiskSDKInternalConfigTestImpl(
+                merchantPublicKey = "pk_test_key",
+                environment = RiskEnvironment.QA,
+                deviceDataEndpoint = mockWebServer.url("/").toString(),
+                fingerprintEndpoint = mockWebServer.url("/").toString(),
+                integrationType = RiskIntegrationType.STANDALONE,
+                sourceType = SourceType.RISK_SDK,
+            )
+        val deviceDataService = DeviceDataService(internalConfig)
+
+        runTest {
+            val result =
+                deviceDataService.persistFingerprintData(
+                    "fp_data",
+                    "card_token",
+                    listOf(CollectorData(collector = "fingerprint", sealedResult = null)),
+                )
+            Assert.assertTrue("expected Success but got $result", result is NetworkResult.Success)
+            result as NetworkResult.Success
+            Assert.assertNull(result.data.deviceSessionId)
         }
     }
 }

@@ -148,6 +148,27 @@ The package exposes two methods:
     ```
     </details>
 
+### Device collectors
+The SDK collects device data through one or more *collectors*. Which collectors run is
+controlled server-side per merchant via the `configurations` endpoint (`data_collectors`);
+no integration changes are required to enable or disable a collector.
+
+| Collector | Provider (`device_collector_provider`) | Description |
+| --- | --- | --- |
+| FingerprintPRO | `fingerprint` | Highly accurate (~99%) device id resolved server-side. Requires a fingerprint public key. |
+| fingerprintjs (OSS) | `simple` | Open-source, on-device device id with no backend call. Runs **in parallel** with PRO when both are enabled. |
+
+When enabled, each collector's payload is sent on `publishData` in the `fingerprint/v2`
+`collectors` array, tagged with its provider. A single collector failing does not prevent
+the others from publishing.
+
+> **AAR-size impact:** the open-source [fingerprintjs-android](https://github.com/fingerprintjs/fingerprintjs-android)
+> collector adds ~580&nbsp;KB (unminified) to the dependency graph. Its transitive
+> dependencies (`kotlin-stdlib`, `androidx.appcompat`) are already present in typical
+> Android apps, so the net footprint after R8/shrinking is smaller.
+>
+> **License:** fingerprintjs-android is [MIT licensed](https://github.com/fingerprintjs/fingerprintjs-android/blob/main/LICENSE) with no restrictions on production usage.
+
 ### Additional Resources
 <!-- TODO: Add website documentation link here - [Risk Android SDK documentation](https://docs.checkout.com/risk/overview) -->
 - [Frames Android SDK documentation](https://www.checkout.com/docs/developer-resources/sdks/frames-android-sdk)

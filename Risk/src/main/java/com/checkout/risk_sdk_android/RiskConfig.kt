@@ -73,3 +73,17 @@ internal enum class SourceType(val rawValue: String) {
     CARD_TOKEN("card_token"),
     RISK_SDK("riskandroid"),
 }
+
+/**
+ * Device collectors supported by the SDK. A collector is enabled when its
+ * [collectorName] is present in the `data_collectors` list returned by the
+ * `configurations` endpoint. The backend derives the `device_collector_provider`
+ * recorded on prism_events from this name.
+ */
+internal enum class DeviceCollector(val collectorName: String) {
+    // FingerprintPRO — device id resolved server-side; travels via root fp_request_id.
+    FINGERPRINT("fingerprint"),
+
+    // Open-source fingerprintjs-android — device id computed locally, no backend call.
+    SIMPLE("simple"),
+}

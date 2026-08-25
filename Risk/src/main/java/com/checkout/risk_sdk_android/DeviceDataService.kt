@@ -25,7 +25,7 @@ internal class DeviceDataService(
     /**
      * Retrieves the device data configuration.
      *
-     * @return Result containing the FingerprintIntegration on success, or an exception on failure.
+     * @return Result containing the DeviceDataConfiguration on success, or an exception on failure.
      */
     suspend fun getConfiguration(): NetworkResult<DeviceDataConfiguration> =
         executeApiCall {
@@ -38,15 +38,18 @@ internal class DeviceDataService(
         }
 
     /**
-     * Persists the fingerprint data.
+     * Persists the collected device data to the `fingerprint/v2` endpoint.
      *
-     * @param requestId The requestId.
+     * @param requestId The root fingerprint request id (from the PRO collector when present).
+     * @param cardToken The optional card token (frames integration).
+     * @param collectors The per-collector payloads that were gathered in parallel.
      *
      * @return Result containing PersistFingerprintDataResponse on success, or an exception on failure.
      */
     suspend fun persistFingerprintData(
         requestId: String,
         cardToken: String?,
+        collectors: List<CollectorData>,
     ): NetworkResult<PersistFingerprintDataResponse> =
         executeApiCall {
             deviceDataApi.persistFingerprintData(
@@ -56,6 +59,7 @@ internal class DeviceDataService(
                     fpRequestId = requestId,
                     integrationType = integrationType.type,
                     cardToken = cardToken,
+                    collectors = collectors,
                 ),
             )
         }
@@ -89,7 +93,7 @@ private sealed interface DeviceDataApi {
         }
     }
 
-    @GET("/collect/configuration")
+    @GET("/collect/configurations")
     suspend fun getConfiguration(
         @Header("Authorization") authHeader: String,
         @Query("integrationType") integrationType: String,
@@ -97,7 +101,7 @@ private sealed interface DeviceDataApi {
         @Query("timezone") timezone: String,
     ): Response<DeviceDataConfiguration>
 
-    @PUT("/collect/fingerprint")
+    @PUT("/collect/fingerprint/v2")
     suspend fun persistFingerprintData(
         @Header("Authorization") authHeader: String,
         @Query("riskSdkVersion") riskSdkVersion: String,
@@ -105,21 +109,43 @@ private sealed interface DeviceDataApi {
     ): Response<PersistFingerprintDataResponse>
 }
 
+/**
+ * Response of the `configurations` endpoint. [dataCollectors] lists the collectors
+ * enabled for the merchant (e.g. "fingerprint", "simple"); a collector is
+ * considered enabled when its name is present in this list.
+ */
 internal data class DeviceDataConfiguration(
-    @SerializedName("fingerprint_integration")
-    val fingerprintIntegration: FingerprintIntegration,
-)
-
-internal data class FingerprintIntegration(
-    @SerializedName("enabled")
-    val enabled: Boolean,
+    @SerializedName("data_collectors")
+    val dataCollectors: List<String>? = emptyList(),
     @SerializedName("public_key")
-    val publicKey: String?,
-)
+    val publicKey: String? = null,
+    @SerializedName("simple")
+    val simple: SimpleCollectorConfig? = null,
+) {
+    val dataCollectorsOrEmpty: List<String>
+        get() = dataCollectors.orEmpty()
+}
+
+/**
+ * Per-collector configuration for the `simple` collector.
+ *
+ * @property dropFieldPaths Dot-notation paths into the collected `device` data that must be
+ * removed before the payload is base64-encoded (e.g. "canvas.value.geometry").
+ * @property timeoutMs Collection timeout budget in milliseconds.
+ */
+internal data class SimpleCollectorConfig(
+    @SerializedName("drop_field_paths")
+    val dropFieldPaths: List<String>? = emptyList(),
+    @SerializedName("timeout_ms")
+    val timeoutMs: Long? = null,
+) {
+    val dropFieldPathsOrEmpty: List<String>
+        get() = dropFieldPaths.orEmpty()
+}
 
 internal data class PersistFingerprintDataResponse(
     @SerializedName("device_session_id")
-    val deviceSessionId: String,
+    val deviceSessionId: String? = null,
 )
 
 internal data class PersistFingerprintDataRequest(
@@ -129,6 +155,24 @@ internal data class PersistFingerprintDataRequest(
     val integrationType: String,
     @SerializedName("card_token")
     val cardToken: String?,
+    @SerializedName("collectors")
+    val collectors: List<CollectorData>,
+)
+
+/**
+ * A single collector's contribution to the publish payload. The backend derives the
+ * `device_collector_provider` recorded on prism_events from [collector].
+ *
+ * For the PRO collector the raw identifier travels in the root `fp_request_id`, so
+ * [sealedResult] is null. For the open-source `simple` collector the collected
+ * device data (the device ids plus the fingerprint hash) is JSON-serialised and base64-encoded
+ * into [sealedResult].
+ */
+internal data class CollectorData(
+    @SerializedName("collector")
+    val collector: String,
+    @SerializedName("sealed_result")
+    val sealedResult: String?,
 )
 
 internal sealed class NetworkResult<out T> {

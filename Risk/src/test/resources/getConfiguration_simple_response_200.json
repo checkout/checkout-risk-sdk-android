@@ -1,0 +1,8 @@
+{
+  "data_collectors": ["simple", "fingerprint"],
+  "public_key": "RiskAndroid_Standalone_public_key",
+  "simple": {
+    "drop_field_paths": ["procCpuInfoV2", "canvas.value.text"],
+    "timeout_ms": 1000
+  }
+}

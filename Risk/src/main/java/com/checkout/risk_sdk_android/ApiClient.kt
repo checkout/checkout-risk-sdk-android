@@ -10,7 +10,14 @@ internal const val TIMEOUT_DURATION_SECONDS = 5L
 internal fun getRetrofitClient(baseUrl: String): Retrofit {
     val httpInterceptor =
         HttpLoggingInterceptor()
-            .setLevel(HttpLoggingInterceptor.Level.BODY)
+            .setLevel(
+                if (BuildConfig.DEBUG) {
+                    HttpLoggingInterceptor.Level.BODY
+                } else {
+                    HttpLoggingInterceptor.Level.NONE
+                },
+            )
+            .apply { redactHeader("Authorization") }
 
     val client =
         OkHttpClient.Builder()

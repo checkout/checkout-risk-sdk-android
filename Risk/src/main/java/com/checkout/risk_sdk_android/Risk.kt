@@ -1,6 +1,9 @@
 package com.checkout.risk
 
 import android.content.Context
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import java.util.UUID
 
 public class Risk private constructor(private val riskInternal: RiskInternal) {
     public companion object {
@@ -22,19 +25,26 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
 
             when (val deviceDataConfig = deviceDataService.getConfiguration()) {
                 is NetworkResult.Success -> {
-                    val endBlockTime = System.nanoTime()
-                    val blockTime = (endBlockTime - startBlockTime) / 1_000_000.0
+                    val blockTime = elapsedMs(startBlockTime)
+                    val dataCollectors = deviceDataConfig.data.dataCollectorsOrEmpty
+                    val publicKey = deviceDataConfig.data.publicKey
 
-                    if (!deviceDataConfig.data.fingerprintIntegration.enabled ||
-                        deviceDataConfig.data.fingerprintIntegration.publicKey == null
-                    ) {
+                    // A collector is enabled when its name is present in `data_collectors`.
+                    // The PRO collector additionally needs a fingerprint public key.
+                    val proEnabled =
+                        dataCollectors.contains(DeviceCollector.FINGERPRINT.collectorName) &&
+                            publicKey != null
+                    val simpleEnabled =
+                        dataCollectors.contains(DeviceCollector.SIMPLE.collectorName)
+
+                    if (!proEnabled && !simpleEnabled) {
                         loggerService.log(
                             riskEvent = RiskEvent.PUBLISH_DISABLED,
                             blockTime = blockTime,
                             error =
                                 RiskLogError(
                                     reason = "getConfiguration",
-                                    message = "Fingerprint integration disabled",
+                                    message = "No device collectors enabled",
                                     status = null,
                                     type = "Device Data Service Error",
                                 ),
@@ -45,16 +55,35 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
                     val startFpLoadTime = System.nanoTime()
 
                     val fingerprintService =
-                        FingerprintService(
-                            applicationContext,
-                            internalConfig,
-                            deviceDataConfig.data.fingerprintIntegration.publicKey,
-                        )
+                        if (proEnabled) {
+                            FingerprintService(applicationContext, internalConfig, publicKey!!)
+                        } else {
+                            null
+                        }
 
-                    val endFpLoadTime = System.nanoTime()
-                    val fpLoadTime = (endFpLoadTime - startFpLoadTime) / 1_000_000.0
+                    val simpleService =
+                        if (simpleEnabled) {
+                            SimpleService(
+                                applicationContext,
+                                dropFieldPaths = deviceDataConfig.data.simple?.dropFieldPathsOrEmpty ?: emptyList(),
+                                timeoutMs = deviceDataConfig.data.simple?.timeoutMs,
+                            )
+                        } else {
+                            null
+                        }
 
-                    return Risk(RiskInternal(fingerprintService, deviceDataService, loggerService, blockTime, fpLoadTime))
+                    val fpLoadTime = elapsedMs(startFpLoadTime)
+
+                    return Risk(
+                        RiskInternal(
+                            fingerprintService,
+                            simpleService,
+                            deviceDataService,
+                            loggerService,
+                            blockTime,
+                            fpLoadTime,
+                        ),
+                    )
                 }
 
                 is NetworkResult.Error -> {
@@ -93,16 +122,17 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
                         error =
                         RiskLogError(
                             reason = "getConfiguration",
-                            message = "Unknown error",
+                            message = "Unexpected error",
                             status = null,
-                            type = "Device Data Service Error",
-                            innerExceptionType = "Unknown error",
+                            type = "Device Data Service Didn't return"
                         ),
                     )
                     return null
                 }
             }
         }
+
+        private fun elapsedMs(startNanos: Long): Double = (System.nanoTime() - startNanos) / 1_000_000.0
     }
 
     public suspend fun publishData(cardToken: String? = null): PublishDataResult {
@@ -111,58 +141,164 @@ public class Risk private constructor(private val riskInternal: RiskInternal) {
 }
 
 internal class RiskInternal(
-    private val fingerprintService: FingerprintService,
+    private val fingerprintService: FingerprintService?,
+    private val simpleService: SimpleService?,
     private val deviceDataService: DeviceDataService,
     private val loggerService: LoggerServiceProtocol,
     private val blockTime: Double,
-    private val fpLoadTime: Double
+    private val fpLoadTime: Double,
 ) {
-    suspend fun publishData(cardToken: String?): PublishDataResult {
-        val startFpPublishTime = System.nanoTime()
-        when (val fingerprintResult = fingerprintService.publishData()) {
-            is FingerprintResult.Success -> {
+    suspend fun publishData(cardToken: String?): PublishDataResult =
+        coroutineScope {
+            val startFpPublishTime = System.nanoTime()
 
-                val endFpPublishTime = System.nanoTime()
-                val fpPublishTime = (endFpPublishTime - startFpPublishTime) / 1_000_000.0
-                loggerService.log(
-                    blockTime = blockTime,
-                    fpLoadTime = fpLoadTime,
-                    fpPublishTime = fpPublishTime,
-                    riskEvent = RiskEvent.COLLECTED,
-                    requestID = fingerprintResult.requestId,
-                )
+            // Run every enabled collector concurrently; awaiting both just waits for the
+            // slowest. One collector failing does not prevent the others from publishing.
+            val proDeferred = fingerprintService?.let { service -> async { service.publishData() } }
+            val simpleDeferred = simpleService?.let { service -> async { service.publishData() } }
 
-                val startDeviceDataPersistTime = System.nanoTime()
-                when (
-                    val persistResult =
-                        deviceDataService.persistFingerprintData(
-                            fingerprintResult.requestId,
-                            cardToken,
-                        )
-                ) {
-                    is NetworkResult.Success -> {
-                        val endDeviceDataPersistTime = System.nanoTime()
-                        val deviceDataPersistTime =
-                            (endDeviceDataPersistTime - startDeviceDataPersistTime) / 1_000_000.0
+            val proResult = proDeferred?.await()
+            val simpleResult = simpleDeferred?.await()
+
+            val fpPublishTime = elapsedMs(startFpPublishTime)
+
+            val collectors = mutableListOf<CollectorData>()
+            val providers = mutableListOf<String>()
+            var proRequestId: String? = null
+            var simpleRequestId: String? = null
+
+            when (proResult) {
+                is FingerprintResult.Success -> {
+                    proRequestId = proResult.requestId
+                    collectors.add(CollectorData(DeviceCollector.FINGERPRINT.collectorName, sealedResult = null))
+                    providers.add(DeviceCollector.FINGERPRINT.collectorName)
+                }
+
+                is FingerprintResult.Failure -> {
+                    loggerService.log(
+                        blockTime = blockTime,
+                        fpLoadTime = fpLoadTime,
+                        fpPublishTime = fpPublishTime,
+                        riskEvent = RiskEvent.PUBLISH_FAILURE,
+                        error =
+                            RiskLogError(
+                                reason = "publishData",
+                                message = proResult.description,
+                                status = null,
+                                type = "Fingerprint Service Error",
+                            ),
+                    )
+                }
+
+                null -> Unit // PRO collector not enabled
+                else -> Unit // something gone wrong
+            }
+
+            when (simpleResult) {
+                is SimpleResult.Success -> {
+                    simpleRequestId = simpleResult.requestId
+                    collectors.add(
+                        CollectorData(
+                            DeviceCollector.SIMPLE.collectorName,
+                            sealedResult = simpleResult.sealedResult,
+                        ),
+                    )
+                    providers.add(DeviceCollector.SIMPLE.collectorName)
+                }
+
+                is SimpleResult.Failure -> {
+                    loggerService.log(
+                        blockTime = blockTime,
+                        fpLoadTime = fpLoadTime,
+                        fpPublishTime = fpPublishTime,
+                        riskEvent = RiskEvent.PUBLISH_FAILURE,
+                        error =
+                            RiskLogError(
+                                reason = "publishData",
+                                message = simpleResult.description,
+                                status = null,
+                                type = "Simple Service Error",
+                            ),
+                    )
+                }
+
+                null -> Unit // simple collector not enabled
+                else -> Unit // something gone wrong
+            }
+
+            if (collectors.isEmpty()) {
+                // Every enabled collector failed; the failures are already logged above.
+                return@coroutineScope PublishDataResult.PublishFailure
+            }
+
+            // The backend keys device data on fp_request_id. PRO provides one; when only the
+            // simple collector ran there is no server-side request id, so reuse the client-generated
+            // id embedded in the simple collector's sealed_result payload.
+            val requestId = resolveRequestId(proRequestId, simpleRequestId)
+
+            loggerService.log(
+                blockTime = blockTime,
+                fpLoadTime = fpLoadTime,
+                fpPublishTime = fpPublishTime,
+                riskEvent = RiskEvent.COLLECTED,
+                requestID = requestId,
+                deviceCollectorProviders = providers,
+            )
+
+            val startDeviceDataPersistTime = System.nanoTime()
+            when (
+                val persistResult =
+                    deviceDataService.persistFingerprintData(requestId, cardToken, collectors)
+            ) {
+                is NetworkResult.Success -> {
+                    val deviceDataPersistTime = elapsedMs(startDeviceDataPersistTime)
+
+                    // defensive code
+                    // A 2xx with a missing or blank device_session_id (partial write, proxy
+                    // rewriting the body, a new error shape) must not be reported as Success
+                    val deviceSessionId = persistResult.data.deviceSessionId
+                    if (deviceSessionId.isNullOrBlank()) {
                         loggerService.log(
                             blockTime = blockTime,
                             fpLoadTime = fpLoadTime,
                             fpPublishTime = fpPublishTime,
                             deviceDataPersistTime = deviceDataPersistTime,
-                            riskEvent = RiskEvent.PUBLISHED,
-                            requestID = fingerprintResult.requestId,
-                            deviceSessionID = persistResult.data.deviceSessionId,
+                            riskEvent = RiskEvent.PUBLISH_FAILURE,
+                            requestID = requestId,
+                            deviceCollectorProviders = providers,
+                            error =
+                                RiskLogError(
+                                    reason = "persistFingerprintData",
+                                    message =
+                                        "Response was successful but device_session_id was " +
+                                            "missing or blank",
+                                    status = null,
+                                    type = "Device Data Service Error",
+                                ),
                         )
-                        return PublishDataResult.Success(persistResult.data.deviceSessionId)
+                        return@coroutineScope PublishDataResult.PublishFailure
                     }
 
-                    is NetworkResult.Error -> {
-                        loggerService.log(
-                            blockTime = blockTime,
-                            fpLoadTime = fpLoadTime,
-                            fpPublishTime = fpPublishTime,
-                            riskEvent = RiskEvent.PUBLISH_FAILURE,
-                            error =
+                    loggerService.log(
+                        blockTime = blockTime,
+                        fpLoadTime = fpLoadTime,
+                        fpPublishTime = fpPublishTime,
+                        deviceDataPersistTime = deviceDataPersistTime,
+                        riskEvent = RiskEvent.PUBLISHED,
+                        requestID = requestId,
+                        deviceSessionID = deviceSessionId,
+                        deviceCollectorProviders = providers,
+                    )
+                    PublishDataResult.Success(deviceSessionId)
+                }
+
+                is NetworkResult.Error -> {
+                    loggerService.log(
+                        blockTime = blockTime,
+                        fpLoadTime = fpLoadTime,
+                        fpPublishTime = fpPublishTime,
+                        riskEvent = RiskEvent.PUBLISH_FAILURE,
+                        error =
                             RiskLogError(
                                 reason = "persistFingerprintData",
                                 message = persistResult.message,
@@ -170,17 +306,17 @@ internal class RiskInternal(
                                 type = "Device Data Service Error",
                                 innerExceptionType = persistResult.innerException?.javaClass?.name,
                             ),
-                        )
-                        return PublishDataResult.PublishFailure
-                    }
+                    )
+                    PublishDataResult.PublishFailure
+                }
 
-                    is NetworkResult.Exception -> {
-                        loggerService.log(
-                            blockTime = blockTime,
-                            fpLoadTime = fpLoadTime,
-                            fpPublishTime = fpPublishTime,
-                            riskEvent = RiskEvent.PUBLISH_FAILURE,
-                            error =
+                is NetworkResult.Exception -> {
+                    loggerService.log(
+                        blockTime = blockTime,
+                        fpLoadTime = fpLoadTime,
+                        fpPublishTime = fpPublishTime,
+                        riskEvent = RiskEvent.PUBLISH_FAILURE,
+                        error =
                             RiskLogError(
                                 reason = "persistFingerprintData",
                                 message = persistResult.e.message ?: "Unknown error",
@@ -188,64 +324,41 @@ internal class RiskInternal(
                                 type = "Device Data Service Error",
                                 innerExceptionType = persistResult.e.javaClass.name,
                             ),
-                        )
-                        return PublishDataResult.PublishFailure
-                    }
+                    )
+                    PublishDataResult.PublishFailure
+                }
 
-                    else -> {
-                        loggerService.log(
-                            blockTime = blockTime,
-                            fpLoadTime = fpLoadTime,
-                            fpPublishTime = fpPublishTime,
-                            riskEvent = RiskEvent.PUBLISH_FAILURE,
-                            error =
-                            RiskLogError(
-                                reason = "persistFingerprintData",
-                                message = "Unknown error",
-                                status = null,
-                                type = "Device Data Service Error",
-                                innerExceptionType = "Unknown error",
-                            ),
-                        )
-                        return PublishDataResult.PublishFailure
-                    }
+                else -> {
+                    loggerService.log(
+                        blockTime = blockTime,
+                        fpLoadTime = fpLoadTime,
+                        fpPublishTime = fpPublishTime,
+                        riskEvent = RiskEvent.PUBLISH_FAILURE,
+                        error =
+                        RiskLogError(
+                            reason = "persistFingerprintData",
+                            message = "Unexpected error",
+                            type = "Device Data Service Error",
+                            status = null
+                        ),
+                    )
+                    PublishDataResult.PublishFailure
                 }
             }
-
-            is FingerprintResult.Failure -> {
-                loggerService.log(
-                    blockTime = blockTime,
-                    fpLoadTime = fpLoadTime,
-                    riskEvent = RiskEvent.PUBLISH_FAILURE,
-                    error =
-                    RiskLogError(
-                        reason = "publishData",
-                        message = fingerprintResult.description,
-                        status = null,
-                        type = "Fingerprint Service Error",
-                    ),
-                )
-                return PublishDataResult.PublishFailure
-            }
-
-            else -> {
-                loggerService.log(
-                    blockTime = blockTime,
-                    fpLoadTime = fpLoadTime,
-                    riskEvent = RiskEvent.PUBLISH_FAILURE,
-                    error =
-                    RiskLogError(
-                        reason = "publishData",
-                        message = "Unknown error",
-                        status = null,
-                        type = "Fingerprint Service Error",
-                    ),
-                )
-                return PublishDataResult.PublishFailure
-            }
         }
-    }
+
+    private fun elapsedMs(startNanos: Long): Double = (System.nanoTime() - startNanos) / 1_000_000.0
 }
+
+/**
+ * Resolves the root `fp_request_id`. The PRO collector's server-side id wins; otherwise the
+ * simple collector's client-generated id (which matches the one embedded in its sealed_result) is
+ * used; failing both, a fresh id is generated.
+ */
+internal fun resolveRequestId(
+    proRequestId: String?,
+    simpleRequestId: String?,
+): String = proRequestId ?: simpleRequestId ?: UUID.randomUUID().toString()
 
 public sealed class PublishDataResult {
     public data class Success(val deviceSessionId: String) : PublishDataResult()
