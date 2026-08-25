@@ -50,16 +50,16 @@ The package helps collect device data for merchants with direct integration (sta
   4. Initialise the package with the `getInstance` method passing in the required configuration (public API key and environment) early-on.
         ```kotlin
         // Example usage of package
-        val yourConfig = RiskConfig(publicKey = "pk_qa_xxx", mssd = "xxxxxxxx", environment = RiskEnvironment.QA)
+        val yourConfig = RiskConfig(publicKey = "pk_qa_xxx", environment = RiskEnvironment.QA)
+        // Optionally pass an mssd to send device data to your dedicated endpoint
+        val yourConfigWithMssd = RiskConfig(publicKey = "pk_qa_xxx", environment = RiskEnvironment.QA, mssd = "xxxxxxxx")
         // Initialise the package with the getInstance method early-on
         val riskInstance =
             Risk.getInstance(
                 context,
                 RiskConfig(
-                    BuildConfig.SAMPLE_MERCHANT_PUBLIC_KEY,
-                    BuildConfig.SAMPLE_MERCHANT_MSSD,
-                    RiskEnvironment.QA,
-                    false,
+                    publicKey = BuildConfig.SAMPLE_MERCHANT_PUBLIC_KEY,
+                    environment = RiskEnvironment.QA,
                 ),
             ).let {
                 it?.let {
@@ -88,7 +88,7 @@ The package exposes two methods:
     <summary>Arguments</summary>
 
     ```kotlin
-    data class RiskConfig(val publicKey: String, val mssd: String, val environment: RiskEnvironment, val framesMode: Boolean = false)
+    data class RiskConfig(val publicKey: String, val environment: RiskEnvironment, val framesOptions: FramesOptions? = null, val mssd: String? = null)
 
     // Instance creation of Risk Android package
     public class Risk private constructor(...) {

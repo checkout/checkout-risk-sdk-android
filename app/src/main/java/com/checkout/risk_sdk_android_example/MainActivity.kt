@@ -77,9 +77,9 @@ fun MyScreen(context: Context) {
             Risk.getInstance(
                 context,
                 RiskConfig(
-                    BuildConfig.SAMPLE_MERCHANT_PUBLIC_KEY,
-                    BuildConfig.SAMPLE_MERCHANT_MSSD,
-                    RiskEnvironment.QA
+                    publicKey = BuildConfig.SAMPLE_MERCHANT_PUBLIC_KEY,
+                    environment = RiskEnvironment.QA,
+                    mssd = BuildConfig.SAMPLE_MERCHANT_MSSD.takeIf { it.isNotBlank() },
                 ),
             ).let {
                 it?.let {
