@@ -26,7 +26,7 @@ android {
         buildConfigField(
             "String",
             "SAMPLE_MERCHANT_MSSD",
-            "\"${System.getenv()["SAMPLE_MERCHANT_MSSD"]}\"",
+            "\"${System.getenv()["SAMPLE_MERCHANT_MSSD"] ?: ""}\"",
         )
     }
 
