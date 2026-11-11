@@ -96,7 +96,7 @@ afterEvaluate {
                 from(components.getByName("release"))
                 groupId = "com.github.checkout"
                 artifactId = "checkout-risk-sdk-android"
-                version = "2.4.0"
+                version = "3.0.1"
             }
         }
     }
